@@ -3,15 +3,21 @@
     <PropertyGroup>
         <OutputType>Exe</OutputType>
         <TargetFramework>netcoreapp2.1</TargetFramework>
+        <AssemblyName>KS.FsDNN.DemoApp</AssemblyName>
+        <RootNamespace>KS.FsDNN.DemoApp</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>
-        <Compile Include="Program.fs"/>
+        <Compile Include="Program.fs" />
     </ItemGroup>
 
     <ItemGroup>
         <PackageReference Update="FSharp.Core" Version="4.7.2" />
         <PackageReference Include="Microsoft.Data.Analysis" Version="0.4.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\FsDNN\FsDNN.fsproj" />
     </ItemGroup>
 
 </Project>

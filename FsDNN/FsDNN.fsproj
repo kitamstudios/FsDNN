@@ -2,10 +2,15 @@
 
     <PropertyGroup>
         <TargetFramework>netstandard2.0</TargetFramework>
+        <AssemblyName>KS.FsDNN</AssemblyName>
+        <RootNamespace>KS.FsDNN</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>
-        <Compile Include="Library.fs"/>
+        <Compile Include="P2DFunTK.fs" />
+        <Compile Include="Constants.fs" />
+        <Compile Include="Domain.fs" />
+        <Compile Include="Net.fs" />
     </ItemGroup>
 
     <ItemGroup>
