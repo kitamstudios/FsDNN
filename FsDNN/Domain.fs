@@ -14,11 +14,28 @@ module Domain =
   type LossLayer =
     | SoftMax of {| nc: int |}
 
-  type Transformer =
-    { n: int
-      W: Matrix<double>
-      b: Matrix<double>
-      forward: Matrix<double> -> Matrix<double> }
+    member this.N =
+      match this with
+      | SoftMax s -> s.nc
 
-  type Net =
+  type TransformerInfo<'TData> =
+    { Data: 'TData
+      Forward: Matrix<double> -> Matrix<double> }
+
+  type GenericTransformerData =
+    { W: Matrix<double>
+      b: Matrix<double> }
+
+  type Transformer =
+    | InputTransformer of TransformerInfo<unit>
+    | GenericTransformer of TransformerInfo<GenericTransformerData>
+    | LossTransformer of TransformerInfo<unit>
+
+    member this.Forward =
+      match this with
+      | InputTransformer t -> t.Forward
+      | GenericTransformer t -> t.Forward
+      | LossTransformer t -> t.Forward
+
+  type NetX =
     { Transformers: Transformer list }

@@ -9,8 +9,10 @@
     <ItemGroup>
         <Compile Include="P2DFunTK.fs" />
         <Compile Include="Constants.fs" />
+        <Compile Include="ComputationGraph.fs" />
         <Compile Include="Domain.fs" />
-        <Compile Include="Net.fs" />
+        <Compile Include="Transformer.fs" />
+        <Compile Include="NetX.fs" />
     </ItemGroup>
 
     <ItemGroup>

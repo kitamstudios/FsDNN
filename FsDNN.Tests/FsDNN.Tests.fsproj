@@ -11,6 +11,7 @@
 
     <ItemGroup>
         <Compile Include="TestHelpers.fs" />
+        <Compile Include="ComputationGraphTests.fs" />
         <Compile Include="NetTests.fs" />
         <Compile Include="Program.fs" />
     </ItemGroup>
