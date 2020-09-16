@@ -24,12 +24,11 @@ let forwardOp2 o arg0 arg1 : int =
   | OpAdd -> arg0 + arg1
   | OpMul -> arg0 * arg1
 
-let getIntermediateValues = ComputationGraph.fold (fun acc e -> e.Data :: acc) (fun acc o -> o.IVal.Data :: acc) (fun acc o -> o.IVal.Data :: o.Arg0.Data :: acc) []
+let getIntermediateValues = ComputationGraph.fold (fun acc e -> e.Data :: acc) (fun acc o -> o.In :: acc) (fun acc o -> o.In1 :: o.In0 :: o.Arg0.Data :: acc) []
 
 [<Fact>]
 let ``Simple forward`` () =
   let g = Op2 { Op = OpAdd
-                IVal = { Data = 0; Gradient = 0 }
                 In0 = 0
                 In1 = 0
                 Arg0 = { Data = 1; Gradient = 0 }
@@ -39,22 +38,19 @@ let ``Simple forward`` () =
   J |> should equal 3
 
   let intermediates = getIntermediateValues g
-  intermediates |> should equal [2; 3; 1]
+  intermediates |> should equal [2; 2; 1; 1]
 
 [<Fact>]
 let ``Complex forward`` () =
   let g = Op1 { Op = OpSquare
-                IVal = { Data = 0; Gradient = 0 }
                 In = 0
                 Arg =
                   Op2 { Op = OpMul
-                        IVal = { Data = 0; Gradient = 0 }
                         In0 = 0
                         In1 = 0
                         Arg0 = { Data = 4; Gradient = 0 }
                         Arg1 =
                           Op2 { Op = OpAdd
-                                IVal = { Data = 0; Gradient = 0 }
                                 In0 = 0
                                 In1 = 0
                                 Arg0 = { Data = 1; Gradient = 0 }
@@ -64,7 +60,7 @@ let ``Complex forward`` () =
   J |> should equal 144
 
   let intermediates = getIntermediateValues g
-  intermediates |> should equal [2; 3; 1; 12; 4; 144]
+  intermediates |> should equal [2; 2; 1; 1; 3; 4; 4; 12]
 
 let backPropArg acc a =
   a.Gradient <- acc
@@ -95,7 +91,6 @@ let ``Simple back propagate`` () =
   let g = Op2 { Op = OpMul
                 In0 = 0
                 In1 = 0
-                IVal = { Data = 0; Gradient = 0 }
                 Arg0 = { Data = 1; Gradient = 0 }
                 Arg1 = Arg { Data = 2; Gradient = 0 } }
 
@@ -109,17 +104,14 @@ let ``Simple back propagate`` () =
 [<Fact>]
 let ``Complex back propagate`` () =
   let g = Op1 { Op = OpSquare
-                IVal = { Data = 0; Gradient = 0 }
                 In = 0
                 Arg =
                   Op2 { Op = OpMul
-                        IVal = { Data = 0; Gradient = 0 }
                         In0 = 0
                         In1 = 0
                         Arg0 = { Data = 4; Gradient = 0 }
                         Arg1 =
                           Op2 { Op = OpAdd
-                                IVal = { Data = 0; Gradient = 0 }
                                 In0 = 0
                                 In1 = 0
                                 Arg0 = { Data = 1; Gradient = 0 }

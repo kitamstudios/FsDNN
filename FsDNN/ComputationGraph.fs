@@ -22,9 +22,9 @@ module ComputationGraphDomain =
     | Arg of Value<'TData>
     | Op1 of Op1Info<'TData, 'TOp1, 'TOp2>
     | Op2 of Op2Info<'TData, 'TOp1, 'TOp2>
-  and Value<'TData> = { mutable Data: 'TData; mutable Gradient: 'TData }
-  and Op1Info<'TData, 'TOp1, 'TOp2> = { Op: 'TOp1; mutable IVal: Value<'TData>; mutable In: 'TData; Arg: ComputationGraph<'TData, 'TOp1, 'TOp2>; }
-  and Op2Info<'TData, 'TOp1, 'TOp2> = { Op: 'TOp2; mutable IVal: Value<'TData>; mutable In0: 'TData; mutable In1: 'TData; Arg0: Value<'TData>; Arg1: ComputationGraph<'TData, 'TOp1, 'TOp2> }
+  and Value<'TData> = { Data: 'TData; mutable Gradient: 'TData }
+  and Op1Info<'TData, 'TOp1, 'TOp2> = { Op: 'TOp1; mutable In: 'TData; Arg: ComputationGraph<'TData, 'TOp1, 'TOp2>; }
+  and Op2Info<'TData, 'TOp1, 'TOp2> = { Op: 'TOp2; mutable In0: 'TData; mutable In1: 'TData; Arg0: Value<'TData>; Arg1: ComputationGraph<'TData, 'TOp1, 'TOp2> }
 
 module ComputationGraph =
 
@@ -55,13 +55,11 @@ module ComputationGraph =
 
     let fOp1' (o: Op1Info<_, _, _>) arg =
       let x = fOp1 o.Op arg
-      o.IVal.Data <- x
       o.In <- arg
       x
 
     let fOp2' o arg1 =
       let x = fOp2 o.Op o.Arg0.Data arg1
-      o.IVal.Data <- x
       o.In0 <- o.Arg0.Data
       o.In1 <- arg1
       x
