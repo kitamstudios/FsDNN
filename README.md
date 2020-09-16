@@ -11,3 +11,4 @@
 - https://www.youtube.com/watch?v=i94OvYb6noo&t=392
 
 - https://www.youtube.com/watch?v=i94OvYb6noo&t=2609
+- https://sidburn.github.io/blog/2016/05/28/catamorphisms

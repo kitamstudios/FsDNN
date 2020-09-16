@@ -5,7 +5,7 @@
   - Binary tree with optional right child
   - No splits
 
-- J = 3 * (a + bc)
+- J = ((x + y) * z) ^ 2
   - forward
   - backPropagate
 - generalize for matrix
@@ -18,37 +18,65 @@
 [<AutoOpen>]
 module ComputationGraphDomain =
 
-  type ComputationGraph<'TData, 'TOperation1, 'TOperation2> =
-    | Arg of 'TData
-    | Operation1 of {| Op: 'TOperation1; Arg: ComputationGraph<'TData, 'TOperation1, 'TOperation2> |}
-    | Operation2 of {| Op: 'TOperation2; Arg0: ComputationGraph<'TData, 'TOperation1, 'TOperation2>; Arg1: 'TData |}
-
+  type ComputationGraph<'TData, 'TOp1, 'TOp2> =
+    | Arg of Value<'TData>
+    | Op1 of Op1Info<'TData, 'TOp1, 'TOp2>
+    | Op2 of Op2Info<'TData, 'TOp1, 'TOp2>
+  and Value<'TData> = { mutable Data: 'TData; mutable Gradient: 'TData }
+  and Op1Info<'TData, 'TOp1, 'TOp2> = { Op: 'TOp1; mutable IVal: Value<'TData>; mutable In: 'TData; Arg: ComputationGraph<'TData, 'TOp1, 'TOp2>; }
+  and Op2Info<'TData, 'TOp1, 'TOp2> = { Op: 'TOp2; mutable IVal: Value<'TData>; mutable In0: 'TData; mutable In1: 'TData; Arg0: Value<'TData>; Arg1: ComputationGraph<'TData, 'TOp1, 'TOp2> }
 
 module ComputationGraph =
 
-  let rec fold fArg fOperation1 fOperation2 acc (cg: ComputationGraph<'TData, 'TOperation1, 'TOperation2>) : 'TReturn =
-    let recurse = fold fArg fOperation1 fOperation2
-    match cg with
+  let rec cata fArg fOp1 fOp2 (g: ComputationGraph<'TData, 'TOperation1, 'TOperation2>) : 'TData =
+    let recurse = cata fArg fOp1 fOp2
+    match g with
+    | Arg a ->
+      fArg a
+    | Op1 o ->
+      fOp1 o (recurse o.Arg)
+    | Op2 o ->
+      fOp2 o (recurse o.Arg1)
+
+  let rec fold fArg fOp1 fOp2 acc (g: ComputationGraph<'TData, 'TOperation1, 'TOperation2>) : 'TReturn =
+    let recurse = fold fArg fOp1 fOp2
+    match g with
     | Arg a ->
       fArg acc a
-    | Operation1 o ->
-      let newAcc = fOperation1 acc o.Op
+    | Op1 o ->
+      let newAcc = fOp1 acc o
       recurse newAcc o.Arg
-    | Operation2 o ->
-      let newAcc = fOperation2 acc o.Op o.Arg1
-      recurse newAcc o.Arg0
+    | Op2 o ->
+      let newAcc = fOp2 acc o
+      recurse newAcc o.Arg1
 
-  let foldBack fArg fOperation1 fOperation2 (cg: ComputationGraph<'TData, 'TOperation1, 'TOperation2>) : 'TReturn =
-    let fArg' generator a =
-      generator (fArg a)
-    let fOperation1' generator op =
-      let newGenerator innerValue =
-        let newInnerValue = fOperation1 op innerValue
-        generator newInnerValue
-      newGenerator
-    let fOperation2' generator op arg0 =
-      let newGenerator innerValue =
-        let newInnerValue = fOperation2 op arg0 innerValue
-        generator newInnerValue
-      newGenerator
-    fold fArg' fOperation1' fOperation2' id cg
+  let forward fArg fOp1 fOp2 (g: ComputationGraph<'TData, 'TOperation1, 'TOperation2>) =
+    let fArg' = fArg
+
+    let fOp1' (o: Op1Info<_, _, _>) arg =
+      let x = fOp1 o.Op arg
+      o.IVal.Data <- x
+      o.In <- arg
+      x
+
+    let fOp2' o arg1 =
+      let x = fOp2 o.Op o.Arg0.Data arg1
+      o.IVal.Data <- x
+      o.In0 <- o.Arg0.Data
+      o.In1 <- arg1
+      x
+
+    cata fArg' fOp1' fOp2' g
+
+  let rec backPropagate fArg fOp1 fOp2 acc (g: ComputationGraph<'TData, 'TOperation1, 'TOperation2>) : 'TReturn =
+    let recurse = backPropagate fArg fOp1 fOp2
+
+    match g with
+    | Arg a ->
+      fArg acc a
+    | Op1 o ->
+      let acc' = fOp1 acc o
+      recurse acc' o.Arg
+    | Op2 o ->
+      let acc' = fOp2 acc o
+      recurse acc' o.Arg1
