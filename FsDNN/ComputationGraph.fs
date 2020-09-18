@@ -9,14 +9,9 @@
   - forward
   - backPropagate
 - get mutable out of core
-  - Intermediate data
-  - Gradients
-  - clean up tests + code
-  - rename tests and code
+  - Update parameters with track gradients
   - attempt to merge with fold
   - unused variables
-  - Update parameters with track gradients
-  - remove .Data and pass data map as well
 - generalize for matrix
 - generalize functions
 - track gradient flag
@@ -38,7 +33,7 @@ module ComputationGraphDomain =
 
   /// NOTE: Currently represent only feedforward neural networks.
   type ComputationGraph2<'TData, 'TOp1, 'TOp2> =
-    | Arg of {| Id: string; Data: 'TData; |}
+    | Arg of {| Id: string; TrackGradient: bool |}
     | Op1 of {| Id: string; Op: 'TOp1; Arg: ComputationGraph2<'TData, 'TOp1, 'TOp2>; |}
     | Op2 of {| Id: string; Op: 'TOp2; Arg0: ComputationGraph2<'TData, 'TOp1, 'TOp2>; Arg1: ComputationGraph2<'TData, 'TOp1, 'TOp2> |}
 
@@ -47,14 +42,14 @@ module ComputationGraph =
     let recurse g = cata fArg fOp1 fOp2 g
 
     match g with
-    | Arg a -> fArg a.Id a.Data
+    | Arg a -> fArg a.Id
     | Op1 o -> fOp1 o.Id o.Op (recurse o.Arg)
     | Op2 o -> fOp2 o.Id o.Op (recurse o.Arg0) (recurse o.Arg1)
 
   let fold fArg fOp1 fOp2 (acc: 'State) (g: ComputationGraph2<'TData, 'TOp1, 'TOp2>): 'State =
     let rec loop t cont =
       match t with
-      | Arg a -> cont (fArg a.Id a.Data acc)
+      | Arg a -> cont (fArg a.Id acc)
       | Op1 o -> loop o.Arg (fun acc ->
                               cont (fOp1 o.Id o.Op acc))
       | Op2 o -> loop o.Arg0 (fun acc0 ->
@@ -64,8 +59,8 @@ module ComputationGraph =
     loop g id
 
   let forward fArg fOp1 fOp2 (g: ComputationGraph2<'TData, 'TOperation1, 'TOperation2>) =
-    let fArg' _ value =
-      let ret = fArg value
+    let fArg' id =
+      let ret = fArg id
       ret, Map.empty
 
     let fOp1' id op (arg1, m) =
@@ -81,12 +76,12 @@ module ComputationGraph =
 
     cata fArg' fOp1' fOp2' g
 
-  let rec backPropagate fArg fOp1 fOp2 (grad0: 'TData, iValues: Map<string, 'TData[]>, gradients: Map<string, 'TData>) (g: ComputationGraph2<'TData, 'TOp1, 'TOp2>): 'TData * Map<string, 'TData[]> * Map<string, 'TData> =
-    let recurse = backPropagate fArg fOp1 fOp2
+  let rec backPropagate fOp1 fOp2 (grad0: 'TData, iValues: Map<string, 'TData[]>, gradients: Map<string, 'TData>) (g: ComputationGraph2<'TData, 'TOp1, 'TOp2>): 'TData * Map<string, 'TData[]> * Map<string, 'TData> =
+    let recurse = backPropagate fOp1 fOp2
 
     match g with
     | Arg a ->
-      fArg (grad0, iValues, gradients) a.Id a.Data
+      (grad0, iValues, if a.TrackGradient then gradients |> Map.add a.Id grad0 else gradients)
     | Op1 o ->
       let outG = fOp1 (grad0, iValues) o.Id o.Op
       let (grad0'', iValues, gradients'') = recurse (outG, iValues, gradients) o.Arg
