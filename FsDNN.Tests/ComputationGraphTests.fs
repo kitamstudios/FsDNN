@@ -24,102 +24,94 @@ let forwardOp2 o arg0 arg1 : int =
   | OpAdd -> arg0 + arg1
   | OpMul -> arg0 * arg1
 
-let getIntermediateValues = ComputationGraph.fold (fun acc e -> e.Data :: acc) (fun acc o -> o.In :: acc) (fun acc o -> o.In1 :: o.In0 :: o.Arg0.Data :: acc) []
-
 [<Fact>]
 let ``Simple forward`` () =
-  let g = Op2 { Op = OpAdd
-                In0 = 0
-                In1 = 0
-                Arg0 = { Data = 1; Gradient = 0 }
-                Arg1 = Arg { Data = 2; Gradient = 0 } }
+  let g = Op2 {| Id = "OpAdd"
+                 Op = OpAdd
+                 Arg0 = Arg {| Id = "Arg0"; Data = 1 |}
+                 Arg1 = Arg {| Id = "Arg1"; Data = 2 |} |}
 
-  let J = ComputationGraph.forward forwardArg forwardOp1 forwardOp2 g
+  let J, iValues = ComputationGraph.forward id forwardOp1 forwardOp2 g
   J |> should equal 3
 
-  let intermediates = getIntermediateValues g
-  intermediates |> should equal [2; 2; 1; 1]
+  iValues |> Map.toList |> should equal [ "OpAdd", [| 1; 2 |] ]
 
 [<Fact>]
 let ``Complex forward`` () =
-  let g = Op1 { Op = OpSquare
-                In = 0
-                Arg =
-                  Op2 { Op = OpMul
-                        In0 = 0
-                        In1 = 0
-                        Arg0 = { Data = 4; Gradient = 0 }
-                        Arg1 =
-                          Op2 { Op = OpAdd
-                                In0 = 0
-                                In1 = 0
-                                Arg0 = { Data = 1; Gradient = 0 }
-                                Arg1 = Arg { Data = 2; Gradient = 0 } } } }
+  let g = Op1 {| Id = "OpSquare"
+                 Op = OpSquare
+                 Arg =
+                   Op2 {| Id = "OpMul"
+                          Op = OpMul
+                          Arg0 = Arg {| Id = "OpMul-Arg0"; Data = 4 |}
+                          Arg1 =
+                            Op2 {| Id = "OpAdd"
+                                   Op = OpAdd
+                                   Arg0 = Arg {| Id = "OpAdd-Arg0"; Data = 1 |}
+                                   Arg1 = Arg {| Id = "OpAdd-Arg1"; Data = 2 |} |} |} |}
 
-  let J = ComputationGraph.forward forwardArg forwardOp1 forwardOp2 g
+  let J, iValues = ComputationGraph.forward id forwardOp1 forwardOp2 g
   J |> should equal 144
 
-  let intermediates = getIntermediateValues g
-  intermediates |> should equal [2; 2; 1; 1; 3; 4; 4; 12]
+  iValues |> Map.toList |> List.sortBy fst |> should equal [ ("OpAdd", [| 1; 2 |]); ("OpMul", [| 4; 3 |]); ("OpSquare", [| 12 |]) ]
 
-let backPropArg acc a =
-  a.Gradient <- acc
-  acc
+let backPropagate1 fArg fOp1 fOp2 acc g =
+  ComputationGraph.fold fArg fOp1 fOp2 acc g
 
-let backPropOp1 acc (o: Op1Info<_, _, _>)  =
-  let acc' =
-    match o.Op with
+let backPropArg1 (inG, iValues, gradients) id value  =
+  (inG, iValues, gradients |> Map.add id inG)
+
+let backPropOp11 (inG, iValues: Map<string, int[]>) id op =
+  let outG =
+    match op with
     | OpSquare ->
-      acc * 2 * o.In
-  acc'
+      inG * 2 * (iValues |> Map.find id).[0]
 
-let backPropOp2 acc (o: Op2Info<_, _, _>)  =
-  let acc' =
-    match o.Op with
+  outG
+
+let backPropOp21 (inG, iValues: Map<string, int[]>) id op =
+  let outG =
+    match op with
     | OpAdd ->
-      o.Arg0.Gradient <- acc
-      acc
+      (inG, inG)
     | OpMul ->
-      o.Arg0.Gradient <- acc * o.In1
-      acc * o.In0
-  acc'
+      let outGs = iValues |> Map.find id
+      (inG * outGs.[1], inG * outGs.[0])
 
-let getGradients = ComputationGraph.fold (fun acc e -> e.Gradient :: acc) (fun acc _ -> acc) (fun acc o -> o.Arg0.Gradient :: acc) []
+  outG
 
 [<Fact>]
 let ``Simple back propagate`` () =
-  let g = Op2 { Op = OpMul
-                In0 = 0
-                In1 = 0
-                Arg0 = { Data = 1; Gradient = 0 }
-                Arg1 = Arg { Data = 2; Gradient = 0 } }
+  let g = Op2 {| Id = "OpMul"
+                 Op = OpMul
+                 Arg0 = Arg {| Id = "Arg0"; Data = 1 |}
+                 Arg1 = Arg {| Id = "Arg1"; Data = 2 |} |}
 
-  ComputationGraph.forward forwardArg forwardOp1 forwardOp2 g |> ignore
-  ComputationGraph.backPropagate backPropArg backPropOp1 backPropOp2 1 g |> ignore
+  let _, iValues = ComputationGraph.forward id forwardOp1 forwardOp2 g
+  let g0', iValues', gradients' = ComputationGraph.backPropagate backPropArg1 backPropOp11 backPropOp21 (1, iValues, Map.empty) g
 
-  let gradients = getGradients g
+  g0' |> should equal 1
+  iValues' |> should equal iValues
+  gradients' |> Map.toList |> List.sortBy fst |> should equal [("Arg0", 2); ("Arg1", 1)]
 
-  gradients |> should equal [1; 2]
 
 [<Fact>]
 let ``Complex back propagate`` () =
-  let g = Op1 { Op = OpSquare
-                In = 0
-                Arg =
-                  Op2 { Op = OpMul
-                        In0 = 0
-                        In1 = 0
-                        Arg0 = { Data = 4; Gradient = 0 }
-                        Arg1 =
-                          Op2 { Op = OpAdd
-                                In0 = 0
-                                In1 = 0
-                                Arg0 = { Data = 1; Gradient = 0 }
-                                Arg1 = Arg { Data = 2; Gradient = 0 } } } }
+  let g = Op1 {| Id = "OpSquare"
+                 Op = OpSquare
+                 Arg =
+                   Op2 {| Id = "OpMul"
+                          Op = OpMul
+                          Arg0 = Arg {| Id = "OpMul-Arg0"; Data = 4 |}
+                          Arg1 =
+                            Op2 {| Id = "OpAdd"
+                                   Op = OpAdd
+                                   Arg0 = Arg {| Id = "OpAdd-Arg0"; Data = 1 |}
+                                   Arg1 = Arg {| Id = "OpAdd-Arg1"; Data = 2 |} |} |} |}
 
-  ComputationGraph.forward forwardArg forwardOp1 forwardOp2 g |> ignore
-  ComputationGraph.backPropagate backPropArg backPropOp1 backPropOp2 1 g |> ignore
+  let _, iValues = ComputationGraph.forward id forwardOp1 forwardOp2 g
+  let g0', iValues', gradients' = ComputationGraph.backPropagate backPropArg1 backPropOp11 backPropOp21 (1, iValues, Map.empty) g
 
-  let gradients = getGradients g
-
-  gradients |> should equal [96; 96; 72]
+  g0' |> should equal 1
+  iValues' |> should equal iValues
+  gradients' |> Map.toList |> List.sortBy fst |> should equal [("OpAdd-Arg0", 96); ("OpAdd-Arg1", 96); ("OpMul-Arg0", 72)]
