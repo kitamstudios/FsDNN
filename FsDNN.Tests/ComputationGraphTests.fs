@@ -60,23 +60,17 @@ let ``Complex forward`` () =
   iValues |> Map.toList |> List.sortBy fst |> should equal [ ("OpAdd", [| 1; 2 |]); ("OpMul", [| 4; 3 |]); ("OpSquare", [| 12 |]) ]
 
 let backPropOp1 (iValues: Map<string, int[]>) inG id op =
-  let outG =
-    match op with
-    | OpSquare ->
-      inG * 2 * (iValues |> Map.find id).[0]
-
-  outG
+  match op with
+  | OpSquare ->
+    inG * 2 * (iValues |> Map.find id).[0]
 
 let backPropOp2 (iValues: Map<string, int[]>) inG id op =
-  let outG =
-    match op with
-    | OpAdd ->
-      (inG, inG)
-    | OpMul ->
-      let outGs = iValues |> Map.find id
-      (inG * outGs.[1], inG * outGs.[0])
-
-  outG
+  match op with
+  | OpAdd ->
+    (inG, inG)
+  | OpMul ->
+    let outGs = iValues |> Map.find id
+    (inG * outGs.[1], inG * outGs.[0])
 
 [<Fact>]
 let ``Simple back propagate`` () =

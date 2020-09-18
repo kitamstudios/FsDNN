@@ -56,8 +56,7 @@ module ComputationGraph =
       if a.TrackGradient then Map.empty |> Map.add a.Id grad0 else Map.empty
     | Op1 o ->
       let outG = fOp1 grad0 o.Id o.Op
-      let gradients = recurse outG o.Arg
-      gradients
+      recurse outG o.Arg
     | Op2 o ->
       let (outG0, outG1) = fOp2 grad0 o.Id o.Op
       let rGradients = recurse outG0 o.Arg0
