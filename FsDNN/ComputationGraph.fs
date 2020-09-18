@@ -1,33 +1,5 @@
 ﻿namespace KS.FsDNN
 
-(*
-- Assume
-  - Binary tree with optional right child
-  - No splits
-
-- J = ((x + y) * z) ^ 2
-  - forward
-  - backPropagate
-- get mutable out of core
-  - Update parameters with track gradients
-  - attempt to merge with fold
-  - unused variables
-- generalize for matrix
-- generalize functions
-- track gradient flag
-
-
-- recompute intermediate values
-  - remove mutable inx
-  - remove separate declarations of type
-
-- recompute gradients
-- update gradients
-- allow opting out of gradient updates
-
-
- *)
-
 [<AutoOpen>]
 module ComputationGraphDomain =
 
@@ -76,18 +48,18 @@ module ComputationGraph =
 
     cata fArg' fOp1' fOp2' g
 
-  let rec backPropagate fOp1 fOp2 (grad0: 'TData, iValues: Map<string, 'TData[]>, gradients: Map<string, 'TData>) (g: ComputationGraph2<'TData, 'TOp1, 'TOp2>): 'TData * Map<string, 'TData[]> * Map<string, 'TData> =
+  let rec backPropagate fOp1 fOp2 (grad0: 'TData) (g: ComputationGraph2<'TData, 'TOp1, 'TOp2>): Map<string, 'TData> =
     let recurse = backPropagate fOp1 fOp2
 
     match g with
     | Arg a ->
-      (grad0, iValues, if a.TrackGradient then gradients |> Map.add a.Id grad0 else gradients)
+      if a.TrackGradient then Map.empty |> Map.add a.Id grad0 else Map.empty
     | Op1 o ->
-      let outG = fOp1 (grad0, iValues) o.Id o.Op
-      let (grad0'', iValues, gradients'') = recurse (outG, iValues, gradients) o.Arg
-      (grad0, iValues, gradients'')
+      let outG = fOp1 grad0 o.Id o.Op
+      let gradients = recurse outG o.Arg
+      gradients
     | Op2 o ->
-      let (outG0, outG1) = fOp2 (grad0, iValues) o.Id o.Op
-      let (grad0'', iValues, gradients') = recurse (outG0, iValues, gradients) o.Arg0
-      let (grad0''', iValues, gradients'') = recurse (outG1, iValues, gradients') o.Arg1
-      (grad0, iValues, gradients'')
+      let (outG0, outG1) = fOp2 grad0 o.Id o.Op
+      let rGradients = recurse outG0 o.Arg0
+      let lGradients = recurse outG1 o.Arg1
+      rGradients |> Map.fold (fun acc key value -> Map.add key value acc) lGradients
