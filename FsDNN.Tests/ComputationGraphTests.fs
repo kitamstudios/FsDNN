@@ -11,18 +11,30 @@ type Operations2 =
   | OpAdd
   | OpMul
 
-let forwardArg parameters id : int =
+let forwardArg parameters id: int =
   parameters |> Map.find id
 
-let forwardOp1 o arg : int =
+let forwardOp1 o arg: int =
   match o with
   | OpSquare ->
     arg * arg
 
-let forwardOp2 o arg0 arg1 : int =
+let forwardOp2 o arg0 arg1: int =
   match o with
   | OpAdd -> arg0 + arg1
   | OpMul -> arg0 * arg1
+
+[<Fact>]
+let ``Simple predict`` () =
+  let g = Op2 {| Id = "OpAdd"
+                 Op = OpAdd
+                 Arg0 = Arg {| Id = "Arg0"; TrackGradient = true |}
+                 Arg1 = Arg {| Id = "Arg1"; TrackGradient = true |} |}
+
+  let parameters = Map.empty |> Map.add "Arg0" 1 |> Map.add "Arg1" 2
+
+  let Y = ComputationGraph.predict (forwardArg parameters) forwardOp1 forwardOp2 g
+  Y |> should equal 3
 
 [<Fact>]
 let ``Simple forward`` () =
@@ -37,6 +49,25 @@ let ``Simple forward`` () =
   J |> should equal 3
 
   iValues |> Map.toList |> should equal [ "OpAdd", [| 1; 2 |] ]
+
+[<Fact>]
+let ``Complex predict`` () =
+  let g = Op1 {| Id = "OpSquare"
+                 Op = OpSquare
+                 Arg =
+                   Op2 {| Id = "OpMul"
+                          Op = OpMul
+                          Arg0 = Arg {| Id = "OpMul-Arg0"; TrackGradient = true |}
+                          Arg1 =
+                            Op2 {| Id = "OpAdd"
+                                   Op = OpAdd
+                                   Arg0 = Arg {| Id = "OpAdd-Arg0"; TrackGradient = true |}
+                                   Arg1 = Arg {| Id = "OpAdd-Arg1"; TrackGradient = true |} |} |} |}
+
+  let parameters = Map.empty |> Map.add "OpMul-Arg0" 4 |> Map.add "OpAdd-Arg0" 1 |> Map.add "OpAdd-Arg1" 2
+
+  let Y = ComputationGraph.predict (forwardArg parameters) forwardOp1 forwardOp2 g
+  Y |> should equal 144
 
 [<Fact>]
 let ``Complex forward`` () =

@@ -4,21 +4,21 @@
 module ComputationGraphDomain =
 
   /// NOTE: Currently represent only feedforward neural networks.
-  type ComputationGraph2<'TData, 'TOp1, 'TOp2> =
+  type ComputationGraph<'TData, 'TOp1, 'TOp2> =
     | Arg of {| Id: string; TrackGradient: bool |}
-    | Op1 of {| Id: string; Op: 'TOp1; Arg: ComputationGraph2<'TData, 'TOp1, 'TOp2>; |}
-    | Op2 of {| Id: string; Op: 'TOp2; Arg0: ComputationGraph2<'TData, 'TOp1, 'TOp2>; Arg1: ComputationGraph2<'TData, 'TOp1, 'TOp2> |}
+    | Op1 of {| Id: string; Op: 'TOp1; Arg: ComputationGraph<'TData, 'TOp1, 'TOp2>; |}
+    | Op2 of {| Id: string; Op: 'TOp2; Arg0: ComputationGraph<'TData, 'TOp1, 'TOp2>; Arg1: ComputationGraph<'TData, 'TOp1, 'TOp2> |}
 
 module ComputationGraph =
-  let rec cata fArg fOp1 fOp2 (g: ComputationGraph2<'TData, 'TOp1, 'TOp2>): 'State =
+  let rec cata fArg fOp1 fOp2 (g: ComputationGraph<'TData, 'TOp1, 'TOp2>): 'State =
     let recurse g = cata fArg fOp1 fOp2 g
 
     match g with
-    | Arg a -> fArg a.Id
+    | Arg a -> fArg a.Id a.TrackGradient
     | Op1 o -> fOp1 o.Id o.Op (recurse o.Arg)
     | Op2 o -> fOp2 o.Id o.Op (recurse o.Arg0) (recurse o.Arg1)
 
-  let fold fArg fOp1 fOp2 (acc: 'State) (g: ComputationGraph2<'TData, 'TOp1, 'TOp2>): 'State =
+  let fold fArg fOp1 fOp2 (acc: 'State) (g: ComputationGraph<'TData, 'TOp1, 'TOp2>): 'State =
     let rec loop t cont =
       match t with
       | Arg a -> cont (fArg a.Id acc)
@@ -30,8 +30,20 @@ module ComputationGraph =
 
     loop g id
 
-  let forward fArg fOp1 fOp2 (g: ComputationGraph2<'TData, 'TOperation1, 'TOperation2>) =
-    let fArg' id =
+  let toString<'TData, 'TOp1, 'TOp2> (g: ComputationGraph<'TData, 'TOp1, 'TOp2>): string =
+    let fArg id tg =
+      sprintf "%s[TG=%b]" id tg
+
+    let fOp1 id op acc =
+      sprintf "%A[%s]( %s )" op id acc
+
+    let fOp2 id op lAcc rAcc =
+      sprintf "%A[%s]( %s, %s )" op id lAcc rAcc
+
+    cata fArg fOp1 fOp2 g
+
+  let forward fArg fOp1 fOp2 (g: ComputationGraph<'TData, 'TOperation1, 'TOperation2>) =
+    let fArg' id _ =
       let ret = fArg id
       ret, Map.empty
 
@@ -48,7 +60,19 @@ module ComputationGraph =
 
     cata fArg' fOp1' fOp2' g
 
-  let rec backPropagate fOp1 fOp2 (grad0: 'TData) (g: ComputationGraph2<'TData, 'TOp1, 'TOp2>): Map<string, 'TData> =
+  let predict fArg fOp1 fOp2 (g: ComputationGraph<'TData, 'TOperation1, 'TOperation2>) =
+    let fArg' id _ =
+      fArg id
+
+    let fOp1' _ op arg1 =
+      fOp1 op arg1
+
+    let fOp2' _ op arg0 arg1 =
+      fOp2 op arg0 arg1
+
+    cata fArg' fOp1' fOp2' g
+
+  let rec backPropagate fOp1 fOp2 (grad0: 'TData) (g: ComputationGraph<'TData, 'TOp1, 'TOp2>): Map<string, 'TData> =
     let recurse = backPropagate fOp1 fOp2
 
     match g with
