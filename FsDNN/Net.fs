@@ -47,12 +47,12 @@ module NetDomain =
       match this with
       | FullyConnectedLayer l -> l.N
 
-  type L1LossLayer =
-    | L1LossLayer of {| Classes: int |}
+  type CrossEntropyLossLayer =
+    | CrossEntropyLossLayer of {| Classes: int |}
 
     member this.Classes =
       match this with
-      | L1LossLayer s -> s.Classes
+      | CrossEntropyLossLayer s -> s.Classes
 
   type ComputationGraph = ComputationGraph<Tensor<double>, Operations1, Operations2>
 
@@ -99,18 +99,18 @@ module Net =
 
     g
 
-  let private _createComputationGraphForPrediction (hiddenLayers: FullyConnectedLayer list) (lossLayer: L1LossLayer): ComputationGraph =
+  let private _createComputationGraphForPrediction (hiddenLayers: FullyConnectedLayer list) (lossLayer: CrossEntropyLossLayer): ComputationGraph =
     let g0 = Arg {| Id = "X"; TrackGradient = false |}
 
     (hiddenLayers |> List.map (fun l -> l.N)) @ [lossLayer.Classes]
     |> List.fold (fun (g, id) _ -> _createComputationGraphForOneLayer g id, id + 1) (g0, 1)
     |> fst
 
-  let makeLayers seed heScale (inputLayer: InputLayer) (hiddenLayers: FullyConnectedLayer list) (lossLayer: L1LossLayer): Net =
+  let makeLayers seed heScale (inputLayer: InputLayer) (hiddenLayers: FullyConnectedLayer list) (lossLayer: CrossEntropyLossLayer): Net =
     let pg = _createComputationGraphForPrediction hiddenLayers lossLayer
 
     let lg = Op2 {| Id = "LossLayer"
-                    Op = OpL1Loss
+                    Op = OpCrossEntropyLoss
                     Arg0 = Arg {| Id = "Y"; TrackGradient = false |}
                     Arg1 = pg |}
 

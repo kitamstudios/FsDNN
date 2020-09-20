@@ -6,7 +6,7 @@ open System.Collections.Generic
 
 //[<Fact>]
 let ``trainWithGD - logistic regression - OR function`` () =
-  let n = Net.makeLayers 1 1.0 { N = 2 } [] (L1LossLayer {| Classes = 1 |})
+  let n = Net.makeLayers 1 1.0 { N = 2 } [] (CrossEntropyLossLayer {| Classes = 1 |})
 
   let X = [ [ 0.; 1.; 0.; 1. ]
             [ 0.; 0.; 1.; 1. ] ] |> Tensor.ofListOfList

@@ -9,7 +9,7 @@ module OperationsDomain =
   type Operations2 =
     | OpAdd
     | OpMultiply
-    | OpL1Loss
+    | OpCrossEntropyLoss
 
 module Operations =
 
@@ -27,7 +27,7 @@ module Operations =
     let backPropagate (inG: Tensor<double>) (arg0: Tensor<double>) (arg1: Tensor<double>) =
       (inG, inG)
 
-  module L1Loss =
+  module CrossEntropyLoss =
     let forwardPropagate (arg0: Tensor<double>) (arg1: Tensor<double>): Tensor<double> =
       Prelude.undefined
 
@@ -52,7 +52,7 @@ module Operations =
     match o with
     | OpAdd -> Add.forwardPropagate arg0 arg1
     | OpMultiply -> Multiply.forwardPropagate arg0 arg1
-    | OpL1Loss -> L1Loss.forwardPropagate arg0 arg1
+    | OpCrossEntropyLoss -> CrossEntropyLoss.forwardPropagate arg0 arg1
 
   let backPropagateOp1 (iValues: Map<string, Tensor<double>[]>) inG id op =
     match op with
@@ -63,4 +63,4 @@ module Operations =
     match op with
     | OpAdd -> Add.backPropagate inG args.[0] args.[1]
     | OpMultiply -> Multiply.backPropagate inG args.[0] args.[1]
-    | OpL1Loss -> L1Loss.backPropagate inG args.[0] args.[1]
+    | OpCrossEntropyLoss -> CrossEntropyLoss.backPropagate inG args.[0] args.[1]

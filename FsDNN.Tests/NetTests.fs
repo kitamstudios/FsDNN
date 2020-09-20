@@ -6,9 +6,9 @@ open FsUnit.Xunit
 
 [<Fact>]
 let ``makeLayer - logistic regression - OR function`` () =
-  let n = Net.makeLayers 1 1.0 { N = 2 } [] (L1LossLayer {| Classes = 1 |})
+  let n = Net.makeLayers 1 1.0 { N = 2 } [] (CrossEntropyLossLayer {| Classes = 1 |})
 
-  n |> Net.toString |> should equal "OpL1Loss[LossLayer]( Y[TG=false], OpSigmoid[OpSigmoid]( OpAdd[OpAdd]( b1[TG=true], OpMultiply[OpMultiply]( W1[TG=true], X[TG=false] ) ) ) )"
+  n |> Net.toString |> should equal "OpCrossEntropyLoss[LossLayer]( Y[TG=false], OpSigmoid[OpSigmoid]( OpAdd[OpAdd]( b1[TG=true], OpMultiply[OpMultiply]( W1[TG=true], X[TG=false] ) ) ) )"
 
   n.Parameters |> Map.toList |> List.map fst |> List.sort |> should equal [ "W1"; "b1" ]
 
@@ -20,7 +20,7 @@ let ``makeLayer - logistic regression - OR function`` () =
 
 [<Fact>]
 let ``predict - logistic regression - OR function`` () =
-  let n = Net.makeLayers 1 1.0 { N = 2 } [] (L1LossLayer {| Classes = 1 |})
+  let n = Net.makeLayers 1 1.0 { N = 2 } [] (CrossEntropyLossLayer {| Classes = 1 |})
 
   let X = [ [ 0.; 1.; 0.; 1. ]
             [ 0.; 0.; 1.; 1. ] ] |> Tensor.ofListOfList

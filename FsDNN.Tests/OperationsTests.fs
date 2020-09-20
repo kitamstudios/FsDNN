@@ -23,7 +23,7 @@ module Multiply =
   let ``backPropagate - simple``() =
     ()
 
-module L1Loss =
+module CrossEntropyLoss =
   [<Fact>]
   let ``forwardPropagate - simple``() =
     ()
