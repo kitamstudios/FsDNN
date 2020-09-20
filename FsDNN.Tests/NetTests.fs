@@ -23,15 +23,15 @@ let ``predict - logistic regression - OR function`` () =
   let n = Net.makeLayers 1 1.0 { N = 2 } [] (L1LossLayer {| Classes = 1 |})
 
   let X = [ [ 0.; 1.; 0.; 1. ]
-            [ 0.; 0.; 1.; 1. ] ] |> Tensor.fromListOfList
-  let Y' = n |> Net.predict X
+            [ 0.; 0.; 1.; 1. ] ] |> Tensor.ofListOfList
+  let Y' = X |> Net.predict n
 
   Y' |> shouldBeEquivalent [ [ 0.5; 0.42571721; 0.38612721; 0.31800234 ] ]
 
 [<Fact>]
-let ``makeLayer - DNN`` () =
+let ``makeLayer - DNN - XOR function`` () =
   ()
 
 [<Fact>]
-let ``predict - DNN`` () =
+let ``predict - DNN - XOR function`` () =
   ()

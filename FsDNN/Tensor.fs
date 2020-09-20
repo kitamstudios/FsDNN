@@ -17,11 +17,11 @@ module TensorDomain =
     | R1 of Vector<'TData>
     | R0 of 'TData
 
-    static member inline Multiply(t0: Tensor<'TData>, t1: Tensor<'TData>): Tensor<'TData> =
-      match (t0, t1) with
-      | R2 m0, R2 m1 -> m0 * m1 |> R2
-      | R2 m0, R0 s1 -> m0.Multiply(s1) |> R2
-      | _ -> Prelude.undefined
+    member this.ColumnCount =
+      match this with
+      | R2 m -> m.ColumnCount
+      | R1 v -> v.Count
+      | R0 _ -> 1
 
     static member inline Add(t0: Tensor<'TData>, t1: Tensor<'TData>): Tensor<'TData> =
       match (t0, t1) with
@@ -30,9 +30,32 @@ module TensorDomain =
       | R2 m0, R0 s1 -> m0.Add(s1) |> R2
       | _ -> Prelude.undefined
 
-    static member inline ( * ) (t0, t1): Tensor<'TData> = Tensor<'TData>.Multiply(t0, t1)
+    static member inline Subtract(t0: Tensor<'TData>, t1: Tensor<'TData>): Tensor<'TData> =
+      match (t0, t1) with
+      | R2 m0, R2 m1 -> m0 - m1 |> R2
+      | R0 s0, R2 m1 -> m1.Negate().Add(s0) |> R2
+      | _ -> Prelude.undefined
+
+    static member inline Multiply(t0: Tensor<'TData>, t1: Tensor<'TData>): Tensor<'TData> =
+      match (t0, t1) with
+      | R2 m0, R2 m1 -> m0 * m1 |> R2
+      | R2 m0, R0 s1 -> m0.Multiply(s1) |> R2
+      | R0 s0, R2 m1 -> m1.Multiply(s0) |> R2
+      | _ -> Prelude.undefined
+
+    static member inline Divide(t0: Tensor<'TData>, t1: Tensor<'TData>): Tensor<'TData> =
+      match (t0, t1) with
+      | R2 m0, R2 m1 -> m0.PointwiseDivide(m1) |> R2
+      | R2 m0, R0 s1 -> m0.Divide(s1) |> R2
+      | _ -> Prelude.undefined
 
     static member inline ( + ) (t0, t1): Tensor<'TData> = Tensor<'TData>.Add(t0, t1)
+
+    static member inline ( - ) (t0, t1): Tensor<'TData> = Tensor<'TData>.Subtract(t0, t1)
+
+    static member inline ( * ) (t0, t1): Tensor<'TData> = Tensor<'TData>.Multiply(t0, t1)
+
+    static member inline ( / ) (t0, t1): Tensor<'TData> = Tensor<'TData>.Divide(t0, t1)
 
 [<Extension>]
 type Tensor =
@@ -58,6 +81,12 @@ type Tensor =
   static member inline Add(t0: Tensor<'TData>, x: 'TData): Tensor<'TData> =
     t0 + (x |> R0)
 
+  [<Extension>]
+  static member inline PointwiseMultiply(t0: Tensor<'TData>, t1: Tensor<'TData>): Tensor<'TData> =
+    match t0, t1 with
+    | R2 m0, R2 m1 -> m0.PointwiseMultiply(m1) |> R2
+    | _ -> Prelude.undefined
+
 module Tensor =
   let createRandomizedR2 seed rows cols scale =
     let t0 = DenseMatrix.random<double> rows cols (Normal.WithMeanVariance(0.0, 1.0, Random(seed))) |> R2
@@ -67,4 +96,4 @@ module Tensor =
   let createZerosR1 n =
     DenseVector.zero<double> n |> R1
 
-  let fromListOfList (rs: double list list) = rs |> array2D |> CreateMatrix.DenseOfArray |> R2
+  let ofListOfList (rs: double list list) = rs |> array2D |> CreateMatrix.DenseOfArray |> R2

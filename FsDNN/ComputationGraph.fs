@@ -3,7 +3,6 @@
 [<AutoOpen>]
 module ComputationGraphDomain =
 
-  /// NOTE: Currently represent only feedforward neural networks.
   type ComputationGraph<'TData, 'TOp1, 'TOp2> =
     | Arg of {| Id: string; TrackGradient: bool |}
     | Op1 of {| Id: string; Op: 'TOp1; Arg: ComputationGraph<'TData, 'TOp1, 'TOp2>; |}
@@ -45,30 +44,29 @@ module ComputationGraph =
   let forward fArg fOp1 fOp2 (g: ComputationGraph<'TData, 'TOperation1, 'TOperation2>) =
     let fArg' id _ =
       let ret = fArg id
-      ret, Map.empty
+      ret, []
 
-    let fOp1' id op (arg1, m) =
-      let ret = fOp1 op arg1
-      let m = m |> Map.add id [| arg1 |]
+    let fOp1' id op (arg, m) =
+      let ret = fOp1 op arg
+      let m = (id, [| arg |]) :: m
       ret, m
 
     let fOp2' id op (arg0, m0) (arg1, m1) =
       let ret = fOp2 op arg0 arg1
-      let m = Map.fold (fun acc key value -> Map.add key value acc) m0 m1
-      let m = m |> Map.add id [| arg0; arg1 |]
+      let m = m0 @ m1
+      let m = (id, [| arg0; arg1 |]) :: m
       ret, m
 
-    cata fArg' fOp1' fOp2' g
+    let J, iValues = cata fArg' fOp1' fOp2' g
+    J, iValues |> Map.ofList
 
   let predict fArg fOp1 fOp2 (g: ComputationGraph<'TData, 'TOperation1, 'TOperation2>) =
     let fArg' id _ =
       fArg id
 
-    let fOp1' _ op arg1 =
-      fOp1 op arg1
+    let fOp1' _ = fOp1
 
-    let fOp2' _ op arg0 arg1 =
-      fOp2 op arg0 arg1
+    let fOp2' _ = fOp2
 
     cata fArg' fOp1' fOp2' g
 

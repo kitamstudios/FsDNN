@@ -1,7 +1,5 @@
 ﻿namespace KS.FsDNN
 
-open System
-
 (*
 
   # Notation & Dimensional Analysis
@@ -56,23 +54,18 @@ module NetDomain =
       match this with
       | L1LossLayer s -> s.Classes
 
-  type Operations1 =
-    | OpSigmoid
-
-  type Operations2 =
-    | OpAdd
-    | OpMultiply
-    | OpL1Loss
-
   type ComputationGraph = ComputationGraph<Tensor<double>, Operations1, Operations2>
+
+  type Parameters = Map<string, Tensor<double>>
 
   type Net =
     { LossGraph: ComputationGraph
       PredictGraph: ComputationGraph
-      Parameters: Map<string, Tensor<double>> }
-
+      Parameters: Parameters }
 
 module Net =
+
+  let Scalar1 = Tensor.ofListOfList [[1.]]
 
   let toString n: string =
     n.LossGraph |> ComputationGraph.toString
@@ -127,19 +120,13 @@ module Net =
       PredictGraph = pg
       Parameters = ps }
 
-  let private _forwardArg parameters id: Tensor<double> =
-    parameters |> Map.find id
-
-  let private _forwardOp1 o (arg: Tensor<double>): Tensor<double> =
-    match o with
-    | OpSigmoid -> arg.Negate().PointwiseExp().Add(1.0).PointwisePower(-1.0)
-
-  let private _forwardOp2 o (arg0: Tensor<double>) (arg1: Tensor<double>): Tensor<double> =
-    match o with
-    | OpAdd -> arg0 + arg1
-    | OpMultiply -> arg0 * arg1
-    | OpL1Loss -> arg0
-
-  let predict (X: Tensor<double>) n =
+  let predict n (X: Tensor<double>) =
     let parameters = n.Parameters |> Map.add "X" X
-    ComputationGraph.predict (_forwardArg parameters) _forwardOp1 _forwardOp2 n.PredictGraph
+    ComputationGraph.predict (Operations.forwardArg parameters) Operations.forwardOp1 Operations.forwardOp2 n.PredictGraph
+
+  let forwardPropagate n (X: Tensor<double>) (Y: Tensor<double>) =
+    let parameters = n.Parameters |> Map.add "X" X |> Map.add "Y" Y
+    ComputationGraph.forward (Operations.forwardArg parameters) Operations.forwardOp1 Operations.forwardOp2 n.PredictGraph
+
+  let backPropagate n iValues =
+    ComputationGraph.backPropagate (Operations.backPropagateOp1 iValues) (Operations.backPropagateOp2 iValues) Scalar1 n.LossGraph
