@@ -1,12 +1,13 @@
 ﻿namespace KS.FsDNN.Tests
 
+open KS.FsDNN
+
 [<AutoOpen>]
 module TestHelpers =
 
   open FluentAssertions
   open FluentAssertions.Equivalency
   open System
-  open MathNet.Numerics.LinearAlgebra
 
   [<Literal>]
   let precision = 5e-7;
@@ -15,13 +16,12 @@ module TestHelpers =
     let action = fun (ctx: IAssertionContext<double>) -> ctx.Subject.Should().BeApproximately(ctx.Expectation, precision, String.Empty, Array.Empty<obj>()) |> ignore
     o.Using<double>(Action<IAssertionContext<double>>(action)).WhenTypeIs<double>()
 
-  let shouldBeEquivalent (a: double list list) (m: Matrix<double>) =
-    m.ToArray().Should().BeEquivalentTo(array2D a, doubleComparisonOptions, String.Empty, Array.empty) |> ignore
+  let shouldBeEquivalent (a: double list list) (m: Tensor<double>) =
+    match m with
+    | R2 m -> m.ToArray().Should().BeEquivalentTo(array2D a, doubleComparisonOptions, String.Empty, Array.empty) |> ignore
+    | R1 v -> (array2D [| v.ToArray() |]).Should().BeEquivalentTo(array2D a, doubleComparisonOptions, String.Empty, Array.empty) |> ignore
+    | _ -> Prelude.undefined
 
-  let shouldBeEquivalentM2 (a: double [,]) (m: Matrix<double>) =
-    m.ToArray().Should().BeEquivalentTo(a, doubleComparisonOptions, String.Empty, Array.empty) |> ignore
 
   let shouldBeApproximately (a1: double) (a2) =
     a1.Should().BeApproximately(a2, precision, String.Empty, Array.empty) |> ignore
-
-  let toM (rs: double list list) = rs |> array2D |> CreateMatrix.DenseOfArray

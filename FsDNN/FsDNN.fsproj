@@ -10,6 +10,7 @@
         <Compile Include="P2DFunTK.fs" />
         <Compile Include="Constants.fs" />
         <Compile Include="ComputationGraph.fs" />
+        <Compile Include="Tensor.fs" />
         <Compile Include="Net.fs" />
     </ItemGroup>
 

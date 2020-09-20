@@ -5,27 +5,28 @@ open Xunit
 open FsUnit.Xunit
 
 [<Fact>]
-let ``makeLayer - logistic regression`` () =
-  let n = Net.makeLayers 1 1.0 { N = 3 } [] (SoftMax {| Classes = 2 |})
+let ``makeLayer - logistic regression - OR function`` () =
+  let n = Net.makeLayers 1 1.0 { N = 2 } [] (L1LossLayer {| Classes = 1 |})
 
-  n |> Net.toString |> should equal "OpL1Loss[L1Loss]( Y[TG=false], OpSigmoid[OpSigmoid]( OpAdd[OpAdd]( b[TG=true], OpMultiply[OpMultiply]( W[TG=true], X[TG=false] ) ) ) )"
+  n |> Net.toString |> should equal "OpL1Loss[LossLayer]( Y[TG=false], OpSigmoid[OpSigmoid]( OpAdd[OpAdd]( b1[TG=true], OpMultiply[OpMultiply]( W1[TG=true], X[TG=false] ) ) ) )"
 
-  n.Parameters |> Map.toList |> List.map fst |> List.sort |> should equal [ "W"; "b" ]
+  n.Parameters |> Map.toList |> List.map fst |> List.sort |> should equal [ "W1"; "b1" ]
 
-  let W = [ [ -0.24441551409037851; -0.37854484132434002; -0.15288972607056753 ] ]
-  n.Parameters.["W"] |> shouldBeEquivalent W
+  let W = [ [ -0.29934664737072975; -0.46362085300372824 ] ]
+  n.Parameters.["W1"] |> shouldBeEquivalent W
 
   let b = [ [ 0. ] ]
-  n.Parameters.["b"] |> shouldBeEquivalent b
+  n.Parameters.["b1"] |> shouldBeEquivalent b
 
 [<Fact>]
-let ``predict - logistic regression`` () =
-  let n = Net.makeLayers 1 1.0 { N = 3 } [] (SoftMax {| Classes = 2 |})
+let ``predict - logistic regression - OR function`` () =
+  let n = Net.makeLayers 1 1.0 { N = 2 } [] (L1LossLayer {| Classes = 1 |})
 
-  let X = [ [ 750. ]; [ 3.9 ]; [ 4. ] ] |> toM
+  let X = [ [ 0.; 1.; 0.; 1. ]
+            [ 0.; 0.; 1.; 1. ] ] |> Tensor.fromListOfList
   let Y' = n |> Net.predict X
 
-  Y' |> shouldBeEquivalent [ [ 3.03397359934e-81 ] ]
+  Y' |> shouldBeEquivalent [ [ 0.5; 0.42571721; 0.38612721; 0.31800234 ] ]
 
 [<Fact>]
 let ``makeLayer - DNN`` () =
