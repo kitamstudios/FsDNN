@@ -54,7 +54,7 @@ module NetDomain =
       match this with
       | CrossEntropyLossLayer s -> s.Classes
 
-  type ComputationGraph = ComputationGraph<Tensor<double>, Operations1, Operations2>
+  type ComputationGraph = ComputationGraph<Tensor<double>>
 
   type Parameters = Map<string, Tensor<double>>
 
@@ -84,13 +84,13 @@ module Net =
 
   let private _createComputationGraphForOneLayer prevLayerCG id: ComputationGraph =
     let g = Op1 {| Id = "OpSigmoid"
-                   Op = OpSigmoid
+                   Functions = Operations.Sigmoid.Functions
                    Arg =
                      Op2 {| Id = "OpAdd"
-                            Op = OpAdd
+                            Functions = Operations.Add.Functions
                             Arg0 =
                               Op2 {| Id = "OpMultiply"
-                                     Op = OpMultiply
+                                     Functions = Operations.Multiply.Functions
                                      Arg0 = Arg {| Id = sprintf "W%d" id; TrackGradient = true |}
                                      Arg1 = prevLayerCG |}
                             Arg1 = Arg {| Id = sprintf "b%d" id; TrackGradient = true |} |} |}
@@ -108,7 +108,7 @@ module Net =
     let pg = _createComputationGraphForPrediction hiddenLayers lossLayer
 
     let lg = Op2 {| Id = "LossLayer"
-                    Op = OpCrossEntropyLoss
+                    Functions = Operations.BinaryCrossEntropyLoss.Functions
                     Arg0 = Arg {| Id = "Y"; TrackGradient = false |}
                     Arg1 = pg |}
 
@@ -118,13 +118,16 @@ module Net =
       PredictGraph = pg
       Parameters = ps }
 
+  let private _forwardArg parameters id: Tensor<double> =
+    parameters |> Map.find id
+
   let predict n (X: Tensor<double>) =
     let parameters = n.Parameters |> Map.add "X" X
-    ComputationGraph.predict (Operations.forwardArg parameters) Operations.forwardOp1 Operations.forwardOp2 n.PredictGraph
+    ComputationGraph.predict (_forwardArg parameters) n.PredictGraph
 
   let forwardPropagate n (X: Tensor<double>) (Y: Tensor<double>) =
     let parameters = n.Parameters |> Map.add "X" X |> Map.add "Y" Y
-    ComputationGraph.forward (Operations.forwardArg parameters) Operations.forwardOp1 Operations.forwardOp2 n.LossGraph
+    ComputationGraph.forward (_forwardArg parameters) n.LossGraph
 
   let backPropagate n cache =
-    ComputationGraph.backPropagate (Operations.backPropagateOp1 cache) (Operations.backPropagateOp2 cache) Scalar1 n.LossGraph
+    ComputationGraph.backPropagate (fun x -> x cache) (fun x -> x cache) Scalar1 n.LossGraph

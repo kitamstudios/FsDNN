@@ -8,7 +8,7 @@ open FsUnit.Xunit
 let ``makeLayer - logistic regression - OR function`` () =
   let n = Net.makeLayers 1 1.0 { N = 2 } [] (CrossEntropyLossLayer {| Classes = 1 |})
 
-  n |> Net.toString |> should equal "OpCrossEntropyLoss[LossLayer]( Y[TG=false], OpSigmoid[OpSigmoid]( OpAdd[OpAdd]( OpMultiply[OpMultiply]( W1[TG=true], X[TG=false] ), b1[TG=true] ) ) )"
+  n |> Net.toString |> should equal "LossLayer( Y[TG=false], OpSigmoid( OpAdd( OpMultiply( W1[TG=true], X[TG=false] ), b1[TG=true] ) ) )"
 
   n.Parameters |> Map.toList |> List.map fst |> List.sort |> should equal [ "W1"; "b1" ]
   n.Parameters.["W1"] |> shouldBeEquivalentTo [ [ -0.29934664737072975; -0.46362085300372824 ] ]

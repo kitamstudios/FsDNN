@@ -5,29 +5,27 @@ module OperationsDomain =
 
   let Scalar1 = R0 1.
 
-  type Operations1 =
-    | OpSigmoid
-
-  type Operations2 =
-    | OpAdd
-    | OpMultiply
-    | OpCrossEntropyLoss
-
 module Operations =
 
   module Add =
     let forwardPropagate (arg0: Tensor<double>) (arg1: Tensor<double>): Tensor<double> =
       arg0 + arg1
 
-    let backPropagate (inG: Tensor<double>) (_: Tensor<double>) (_: Tensor<double>) =
+    let backPropagate (cache: Cache<Tensor<double>>) id (inG: Tensor<double>) =
       (inG, inG)
+
+    let Functions : Op2Functions<_> = { F = forwardPropagate; B = backPropagate }
 
   module Multiply =
     let forwardPropagate (arg0: Tensor<double>) (arg1: Tensor<double>): Tensor<double> =
       arg0 * arg1
 
-    let backPropagate (inG: Tensor<double>) (arg0: Tensor<double>) (arg1: Tensor<double>) =
+    let backPropagate (cache: Cache<Tensor<double>>) id (inG: Tensor<double>) =
+      let arg0 = cache.[id].[0]
+      let arg1 = cache.[id].[1]
       (inG.TransposeAndMultiply(arg1), arg0.TransposeThisAndMultiply(inG))
+
+    let Functions : Op2Functions<_> = { F = forwardPropagate; B = backPropagate }
 
   module BinaryCrossEntropyLoss =
     let forwardPropagate (Y: Tensor<double>) (Ŷ: Tensor<double>): Tensor<double> =
@@ -39,40 +37,23 @@ module Operations =
 
       R0 ((-1. / m) * c.Sum())
 
-    let backPropagate (inG: Tensor<double>) (Y: Tensor<double>) (Ŷ: Tensor<double>) =
+    let backPropagate (cache: Cache<Tensor<double>>) id (inG: Tensor<double>) =
       let g0 = inG
+      let Y = cache.[id].[0]
+      let Ŷ = cache.[id].[1]
       let m = double Y.ColumnCount
       let g1 = (Y.PointwiseDivide(Ŷ.Add(Constants.DivideBy0Guard)).Negate() + Y.Negate().Add(1.0).PointwiseDivide(Ŷ.Negate().Add(1.0 + Constants.DivideBy0Guard))).PointwiseDivide(R0 m)
       (g0, inG.PointwiseMultiply(g1))
+
+    let Functions : Op2Functions<_> = { F = forwardPropagate; B = backPropagate }
 
   module Sigmoid =
     let forwardPropagate (arg: Tensor<double>): Tensor<double> =
       arg.Negate().PointwiseExp().Add(1.0).PointwisePower(-1.0)
 
-    let backPropagate (inG: Tensor<double>) (arg: Tensor<double>) =
+    let backPropagate (cache: Cache<Tensor<double>>) id (inG: Tensor<double>) =
+      let arg = cache.[id].[0]
       let s = arg.Negate().PointwiseExp().Add(1.0).PointwisePower(-1.0)
       inG.PointwiseMultiply(s.PointwiseMultiply(s.Negate().Add(1.0)))
 
-  let forwardArg parameters id: Tensor<double> =
-    parameters |> Map.find id
-
-  let forwardOp1 o (arg: Tensor<double>): Tensor<double> =
-    match o with
-    | OpSigmoid -> Sigmoid.forwardPropagate arg
-
-  let forwardOp2 o (arg0: Tensor<double>) (arg1: Tensor<double>): Tensor<double> =
-    match o with
-    | OpAdd -> Add.forwardPropagate arg0 arg1
-    | OpMultiply -> Multiply.forwardPropagate arg0 arg1
-    | OpCrossEntropyLoss -> BinaryCrossEntropyLoss.forwardPropagate arg0 arg1
-
-  let backPropagateOp1 (cache: Map<string, Tensor<double>[]>) inG id op =
-    match op with
-    | OpSigmoid -> Sigmoid.backPropagate inG cache.[id].[0]
-
-  let backPropagateOp2 (cache: Map<string, Tensor<double>[]>) inG id op =
-    let args = cache.[id]
-    match op with
-    | OpAdd -> Add.backPropagate inG args.[0] args.[1]
-    | OpMultiply -> Multiply.backPropagate inG args.[0] args.[1]
-    | OpCrossEntropyLoss -> BinaryCrossEntropyLoss.backPropagate inG args.[0] args.[1]
+    let Functions : Op1Functions<_> = { F = forwardPropagate; B = backPropagate }
