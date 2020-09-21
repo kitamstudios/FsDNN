@@ -58,15 +58,15 @@ module BinaryCrossEntropyLoss =
 
   [<Fact>]
   let ``backPropagate - simple``() =
-    let arg0 = [ [ 0. ]; [ 1. ]; [ 1. ] ] |> Tensor.ofListOfList
-    let arg1 = [ [ 0.73105858 ]; [ 0.88079708 ]; [ 0.95257413 ]] |> Tensor.ofListOfList
-    let inGArray = [ [ 3. ]; [ 3. ]; [ 3. ] ]
+    let arg0 = [ [ 0. ; 1. ; 1. ] ] |> Tensor.ofListOfList
+    let arg1 = [ [ 0.73105858; 0.88079708; 0.95257413 ] ] |> Tensor.ofListOfList
+    let inGArray = [ [ 3.; 3.; 3. ] ]
     let inG = inGArray |> Tensor.ofListOfList
 
     let dArg0, dArg1 = BinaryCrossEntropyLoss.backPropagate inG arg0 arg1
 
     (dArg0) |> shouldBeEquivalentTo inGArray
-    (arg1 - dArg1) |> shouldBeEquivalentTo [ [ -10.42378691 ]; [ 4.28680293]; [ 4.10193533] ]
+    (arg1 - dArg1) |> shouldBeEquivalentTo [ [ -2.98722326; 2.01613236; 2.00236119 ] ]
 
 module Sigmoid =
   [<Fact>]

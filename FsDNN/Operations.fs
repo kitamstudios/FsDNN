@@ -3,7 +3,7 @@
 [<AutoOpen>]
 module OperationsDomain =
 
-  let Scalar1 = Tensor.ofListOfList [[1.]]
+  let Scalar1 = R0 1.
 
   type Operations1 =
     | OpSigmoid
@@ -41,8 +41,9 @@ module Operations =
 
     let backPropagate (inG: Tensor<double>) (Y: Tensor<double>) (Ŷ: Tensor<double>) =
       let g0 = inG
-      let g1 = (Y.PointwiseDivide(Ŷ.Add(Constants.DivideBy0Guard)).Negate() + Y.Negate().Add(1.0).PointwiseDivide(Ŷ.Negate().Add(1.0 + Constants.DivideBy0Guard)))
-      (g0, g1.PointwiseMultiply(inG))
+      let m = double Y.ColumnCount
+      let g1 = (Y.PointwiseDivide(Ŷ.Add(Constants.DivideBy0Guard)).Negate() + Y.Negate().Add(1.0).PointwiseDivide(Ŷ.Negate().Add(1.0 + Constants.DivideBy0Guard))).PointwiseDivide(R0 m)
+      (g0, inG.PointwiseMultiply(g1))
 
   module Sigmoid =
     let forwardPropagate (arg: Tensor<double>): Tensor<double> =

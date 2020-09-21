@@ -10,8 +10,9 @@ TODO
 - Binomial LR
 - Put functions in the nodes directly
 - Use cached value in sigmoid backPropagate
-
 - collapse softmax_logistic & sigmoid_logistic?
+- optimize matrix operations in tensor layer
+- lr should not be a tensor
 
 - Multinomial LR
 - Multiclass classification => https://sebastianraschka.com/faq/docs/pytorch-crossentropy.html
@@ -25,12 +26,10 @@ TODO
 - https://levelup.gitconnected.com/killer-combo-softmax-and-cross-entropy-5907442f60ba
 - https://peterroelants.github.io/posts/cross-entropy-logistic/
 - https://deepnotes.io/softmax-crossentropy#cross-entropy-loss
-- https://deepai.org/
-
-
+- https://deepai.org/machine-learning-glossary-and-terms/softmax-layer
  *)
 
-//[<Fact>]
+[<Fact>]
 let ``trainWithGD - logistic regression - OR function`` () =
   let n = Net.makeLayers 1 1.0 { N = 2 } [] (CrossEntropyLossLayer {| Classes = 1 |})
 
@@ -40,13 +39,18 @@ let ``trainWithGD - logistic regression - OR function`` () =
 
   let costs = Dictionary<int, Tensor<double>>()
   let cb = fun e _ J -> if e % 1 = 0 then costs.[e] <- J else ()
-  let hp = { HyperParameters.Defaults with Epochs = 1 }
+  let hp = { HyperParameters.Defaults with Epochs = 3 }
 
   let n = Trainer.trainWithGD cb n X Y hp
 
   costs.[0] |> shouldBeEquivalentTo [ [ 0.911103 ] ]
-  n.Parameters.["W1"] |> shouldBeEquivalentTo [ [ -0.29620595; -0.46038118 ] ]
-  n.Parameters.["b1"] |> shouldBeEquivalentTo [ [ 0.0034253831140481175 ] ]
+  costs.[1] |> shouldBeEquivalentTo [ [ 0.907899 ] ]
+  costs.[2] |> shouldBeEquivalentTo [ [ 0.904718 ] ]
+  n.Parameters.["W1"] |> shouldBeEquivalentTo [ [ -0.28995256; -0.45392965 ] ]
+  n.Parameters.["b1"] |> shouldBeEquivalentTo [ [ 0.010229874835574478 ] ]
+
+  let Y' = X |> Net.predict n
+  Y' |> shouldBeEquivalentTo [[0.50255745; 0.43052177; 0.39085974; 0.32439376]]
 
 [<Fact>]
 let ``trainWithGD - DNN - XOR function`` () =

@@ -88,12 +88,12 @@ module Net =
                    Arg =
                      Op2 {| Id = "OpAdd"
                             Op = OpAdd
-                            Arg0 = Arg {| Id = sprintf "b%d" id; TrackGradient = true |}
-                            Arg1 =
+                            Arg0 =
                               Op2 {| Id = "OpMultiply"
                                      Op = OpMultiply
                                      Arg0 = Arg {| Id = sprintf "W%d" id; TrackGradient = true |}
-                                     Arg1 = prevLayerCG |} |} |}
+                                     Arg1 = prevLayerCG |}
+                            Arg1 = Arg {| Id = sprintf "b%d" id; TrackGradient = true |} |} |}
 
     g
 
@@ -124,7 +124,7 @@ module Net =
 
   let forwardPropagate n (X: Tensor<double>) (Y: Tensor<double>) =
     let parameters = n.Parameters |> Map.add "X" X |> Map.add "Y" Y
-    ComputationGraph.forward (Operations.forwardArg parameters) Operations.forwardOp1 Operations.forwardOp2 n.PredictGraph
+    ComputationGraph.forward (Operations.forwardArg parameters) Operations.forwardOp1 Operations.forwardOp2 n.LossGraph
 
   let backPropagate n iValues =
     ComputationGraph.backPropagate (Operations.backPropagateOp1 iValues) (Operations.backPropagateOp2 iValues) Scalar1 n.LossGraph

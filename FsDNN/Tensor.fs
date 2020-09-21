@@ -8,22 +8,31 @@ open System.Runtime.CompilerServices
 
 [<AutoOpen>]
 module TensorDomain =
+  ///
+  /// Emulates np.array by providing an unified interface over Math.Net Matrix and Vector.
+  ///
+  /// NOTE:
+  /// - Broadcasting support is limited.
+  ///   - Ensure first parameter has target dimensions.
+  ///   - Scalar arguments must be first and will be treated as point-wise operations. i.e. no broadcasting.
+  ///
   type Tensor<'TData
-    when 'TData: (new: unit -> 'TData)
-     and 'TData: struct and 'TData :> IEquatable<'TData>
+    when 'TData : (new: unit -> 'TData)
+     and 'TData : struct and 'TData :> IEquatable<'TData>
      and 'TData :> IFormattable
-     and 'TData :> ValueType> =
+     and 'TData :> ValueType
+     > =
     | R2 of Matrix<'TData>
     | R1 of Vector<'TData>
     | R0 of 'TData
 
-    member this.ColumnCount =
+    member inline this.ColumnCount =
       match this with
       | R2 m -> m.ColumnCount
       | R1 _ -> 1
       | R0 _ -> 1
 
-    member this.RowCount =
+    member inline this.RowCount =
       match this with
       | R2 m -> m.RowCount
       | R1 v -> v.Count
@@ -31,20 +40,20 @@ module TensorDomain =
 
     static member inline Add(t0: Tensor<'TData>, t1: Tensor<'TData>): Tensor<'TData> =
       match (t0, t1) with
-      | R2 m0, R2 m1 -> m0 + m1 |> R2
-      | R1 v0, R2 m1 -> DenseMatrix.ofColumnSeq (Enumerable.Repeat(v0, m1.ColumnCount)) + m1 |> R2
+      | R2 m0, R2 m1 -> (m0 + m1) |> R2
+      | R2 m0, R1 v1 -> (m0 + DenseMatrix.ofColumnSeq (Enumerable.Repeat(v1, m0.ColumnCount))) |> R2
       | R2 m0, R0 s1 -> m0.Add(s1) |> R2
       | _ -> Prelude.undefined
 
     static member inline Subtract(t0: Tensor<'TData>, t1: Tensor<'TData>): Tensor<'TData> =
       match (t0, t1) with
-      | R2 m0, R2 m1 -> m0 - m1 |> R2
-      | R0 s0, R2 m1 -> m1.Negate().Add(s0) |> R2
+      | R2 m0, R2 m1 -> m0.Subtract(m1) |> R2
+      | R1 v0, R2 m1 -> (v0 - (m1.EnumerateColumns() |> Seq.reduce (+))) |> R1
       | _ -> Prelude.undefined
 
     static member inline Multiply(t0: Tensor<'TData>, t1: Tensor<'TData>): Tensor<'TData> =
       match (t0, t1) with
-      | R2 m0, R2 m1 -> m0 * m1 |> R2
+      | R2 m0, R2 m1 -> m0.Multiply(m1) |> R2
       | R2 m0, R0 s1 -> m0.Multiply(s1) |> R2
       | R0 s0, R2 m1 -> m1.Multiply(s0) |> R2
       | _ -> Prelude.undefined
@@ -91,12 +100,15 @@ type Tensor =
   static member inline PointwiseMultiply(t0: Tensor<'TData>, t1: Tensor<'TData>): Tensor<'TData> =
     match t0, t1 with
     | R2 m0, R2 m1 -> m0.PointwiseMultiply(m1) |> R2
+    | R0 s0, R2 m1 -> m1.Multiply(s0) |> R2
+    | R0 s0, R0 s1 -> (s0 * s1) |> R0
     | _ -> Prelude.undefined
 
   [<Extension>]
   static member inline PointwiseDivide(t0: Tensor<'TData>, t1: Tensor<'TData>): Tensor<'TData> =
     match t0, t1 with
     | R2 m0, R2 m1 -> m0.PointwiseDivide(m1) |> R2
+    | R2 m0, R0 s1 -> (m0 / s1) |> R2
     | _ -> Prelude.undefined
 
   [<Extension>]

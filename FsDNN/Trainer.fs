@@ -70,7 +70,7 @@ module TrainerDomain =
       BatchSize: BatchSize } with
     static member Defaults =
       { Epochs = 1_000
-        LearningRate = [ [ 0.01 ] ] |> Tensor.ofListOfList
+        LearningRate = R0 0.01
         Lambda = None (* Some 0.7 *)
         Optimization = NoOptimization (* ADAMOptimization ADAMParameters.Defaults *)
         BatchSize = BatchSizeAll (* BatchSize64 *) }
@@ -85,9 +85,9 @@ module Trainer =
     else
       Prelude.undefined
 
-  let private _updateParametersWithNoOptimization (α: Tensor<double>) (parameters: Parameters) (gradients: Gradients): TrainingState =
+  let private _updateParametersWithNoOptimization (lr: Tensor<double>) (parameters: Parameters) (gradients: Gradients): TrainingState =
     parameters
-    |> Map.map (fun id value -> value - (α * gradients.[id]))
+    |> Map.map (fun id value -> value - (lr * gradients.[id]))
     |> NoOptTrainingState
 
   let private _updateParameters (hp: HyperParameters) (ts: TrainingState) (gradients: Gradients): TrainingState =
@@ -97,12 +97,12 @@ module Trainer =
 
   let private _trainNetworkFor1MiniBatch net hp (J: Tensor<double>, ts: TrainingState, timer: Stopwatch) (X: Tensor<double>, Y: Tensor<double>): (Tensor<double> * TrainingState * Stopwatch) =
     timer.Start()
-    let J', iValues = Net.forwardPropagate net X Y
+    let J', iValues = Net.forwardPropagate { net with Parameters = ts.Parameters } X Y
     let gradients = Net.backPropagate net iValues
     let ts = _updateParameters hp ts gradients
     timer.Stop()
     let m = X.ColumnCount
-    let J = J + J' * (m |> double |> R0)
+    let J = (m |> double |> R0).PointwiseMultiply(J')
     J, ts, timer
 
   let private _trainNetworkFor1Epoch (timer: Stopwatch) (callback: EpochCallback) (net: Net) (X: Tensor<double>) (Y: Tensor<double>) (hp: HyperParameters) (ts: TrainingState) epoch =
@@ -114,8 +114,8 @@ module Trainer =
       |> Seq.fold (_trainNetworkFor1MiniBatch net hp) (0. |> R0, ts, timer)
     timer.Stop()
 
-    let m = X.ColumnCount
-    let J = J / (m |> double |> R0)
+    let m = double X.ColumnCount
+    let J = (R0 (1. / m)).PointwiseMultiply(J)
     callback epoch timer.Elapsed J
     ts
 
