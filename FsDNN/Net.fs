@@ -65,8 +65,6 @@ module NetDomain =
 
 module Net =
 
-  let Scalar1 = Tensor.ofListOfList [[1.]]
-
   let toString n: string =
     n.LossGraph |> ComputationGraph.toString
 

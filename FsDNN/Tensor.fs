@@ -20,6 +20,12 @@ module TensorDomain =
     member this.ColumnCount =
       match this with
       | R2 m -> m.ColumnCount
+      | R1 _ -> 1
+      | R0 _ -> 1
+
+    member this.RowCount =
+      match this with
+      | R2 m -> m.RowCount
       | R1 v -> v.Count
       | R0 _ -> 1
 
@@ -86,6 +92,37 @@ type Tensor =
     match t0, t1 with
     | R2 m0, R2 m1 -> m0.PointwiseMultiply(m1) |> R2
     | _ -> Prelude.undefined
+
+  [<Extension>]
+  static member inline PointwiseDivide(t0: Tensor<'TData>, t1: Tensor<'TData>): Tensor<'TData> =
+    match t0, t1 with
+    | R2 m0, R2 m1 -> m0.PointwiseDivide(m1) |> R2
+    | _ -> Prelude.undefined
+
+  [<Extension>]
+  static member inline TransposeAndMultiply(t0: Tensor<'TData>, t1: Tensor<'TData>): Tensor<'TData> =
+    match t0, t1 with
+    | R2 m0, R2 m1 -> m0.TransposeAndMultiply(m1) |> R2
+    | _ -> Prelude.undefined
+
+  [<Extension>]
+  static member inline TransposeThisAndMultiply(t0: Tensor<'TData>, t1: Tensor<'TData>): Tensor<'TData> =
+    match t0, t1 with
+    | R2 m0, R2 m1 -> m0.TransposeThisAndMultiply(m1) |> R2
+    | _ -> Prelude.undefined
+
+  [<Extension>]
+  static member inline PointwiseLog(t: Tensor<'TData>): Tensor<'TData> =
+    match t with
+    | R2 m -> m.PointwiseLog() |> R2
+    | _ -> Prelude.undefined
+
+  [<Extension>]
+  static member inline Sum(t: Tensor<'TData>): 'TData =
+    match t with
+    | R2 m -> m.ColumnSums().Sum()
+    | R1 v -> v.Sum()
+    | R0 s -> s
 
 module Tensor =
   let createRandomizedR2 seed rows cols scale =

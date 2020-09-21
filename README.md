@@ -20,7 +20,7 @@
 - [ ] Optimization: MBGD, Momentum, ADAM
 - [ ] Basic transfer learning
 - [ ] Gradient checking
-- [ ] Demo apps
+- [ ] Demos
 
 ## Performance
 
