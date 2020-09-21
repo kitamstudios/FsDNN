@@ -70,7 +70,7 @@ module TrainerDomain =
       BatchSize: BatchSize } with
     static member Defaults =
       { Epochs = 1_000
-        LearningRate = R0 0.01
+        LearningRate = TensorR0 0.01
         Lambda = None (* Some 0.7 *)
         Optimization = NoOptimization (* ADAMOptimization ADAMParameters.Defaults *)
         BatchSize = BatchSizeAll (* BatchSize64 *) }
@@ -102,7 +102,7 @@ module Trainer =
     let ts = _updateParameters hp ts gradients
     timer.Stop()
     let m = X.ColumnCount
-    let J = (m |> double |> R0).PointwiseMultiply(J')
+    let J = (m |> double |> TensorR0).PointwiseMultiply(J')
     J, ts, timer
 
   let private _trainNetworkFor1Epoch (timer: Stopwatch) (callback: EpochCallback) (net: Net) (X: Tensor<double>) (Y: Tensor<double>) (hp: HyperParameters) (ts: TrainingState) epoch =
@@ -111,11 +111,11 @@ module Trainer =
     let J, ts, timer =
       (X, Y)
       |> _getMiniBatches hp.BatchSize
-      |> Seq.fold (_trainNetworkFor1MiniBatch net hp) (0. |> R0, ts, timer)
+      |> Seq.fold (_trainNetworkFor1MiniBatch net hp) (0. |> TensorR0, ts, timer)
     timer.Stop()
 
     let m = double X.ColumnCount
-    let J = (R0 (1. / m)).PointwiseMultiply(J)
+    let J = (TensorR0 (1. / m)).PointwiseMultiply(J)
     callback epoch timer.Elapsed J
     ts
 

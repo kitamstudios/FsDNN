@@ -12,6 +12,7 @@ TODO
 - Use cached value in sigmoid backPropagate
 - collapse softmax_logistic & sigmoid_logistic?
 - optimize matrix operations in tensor layer
+- Remove Tensor R0
 - lr should not be a tensor
 
 - Multinomial LR

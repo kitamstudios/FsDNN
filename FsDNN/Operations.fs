@@ -3,7 +3,7 @@
 [<AutoOpen>]
 module OperationsDomain =
 
-  let Scalar1 = R0 1.
+  let Scalar1 = TensorR0 1.
 
 module Operations =
 
@@ -11,7 +11,7 @@ module Operations =
     let forwardPropagate (arg0: Tensor<double>) (arg1: Tensor<double>): Tensor<double> =
       arg0 + arg1
 
-    let backPropagate (cache: Cache<Tensor<double>>) id (inG: Tensor<double>) =
+    let backPropagate (_: Cache<Tensor<double>>) _ (inG: Tensor<double>) =
       (inG, inG)
 
     let Functions : Op2Functions<_> = { F = forwardPropagate; B = backPropagate }
@@ -35,14 +35,14 @@ module Operations =
 
       let m = double Y.ColumnCount
 
-      R0 ((-1. / m) * c.Sum())
+      TensorR0 ((-1. / m) * c.Sum())
 
     let backPropagate (cache: Cache<Tensor<double>>) id (inG: Tensor<double>) =
       let g0 = inG
       let Y = cache.[id].[0]
       let Ŷ = cache.[id].[1]
       let m = double Y.ColumnCount
-      let g1 = (Y.PointwiseDivide(Ŷ.Add(Constants.DivideBy0Guard)).Negate() + Y.Negate().Add(1.0).PointwiseDivide(Ŷ.Negate().Add(1.0 + Constants.DivideBy0Guard))).PointwiseDivide(R0 m)
+      let g1 = (Y.PointwiseDivide(Ŷ.Add(Constants.DivideBy0Guard)).Negate() + Y.Negate().Add(1.0).PointwiseDivide(Ŷ.Negate().Add(1.0 + Constants.DivideBy0Guard))).PointwiseDivide(TensorR0 m)
       (g0, inG.PointwiseMultiply(g1))
 
     let Functions : Op2Functions<_> = { F = forwardPropagate; B = backPropagate }

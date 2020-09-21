@@ -22,46 +22,46 @@ module TensorDomain =
      and 'TData :> IFormattable
      and 'TData :> ValueType
      > =
-    | R2 of Matrix<'TData>
-    | R1 of Vector<'TData>
-    | R0 of 'TData
+    | TensorR2 of Matrix<'TData>
+    | TensorR1 of Vector<'TData>
+    | TensorR0 of 'TData
 
     member inline this.ColumnCount =
       match this with
-      | R2 m -> m.ColumnCount
-      | R1 _ -> 1
-      | R0 _ -> 1
+      | TensorR2 m -> m.ColumnCount
+      | TensorR1 _ -> 1
+      | TensorR0 _ -> 1
 
     member inline this.RowCount =
       match this with
-      | R2 m -> m.RowCount
-      | R1 v -> v.Count
-      | R0 _ -> 1
+      | TensorR2 m -> m.RowCount
+      | TensorR1 v -> v.Count
+      | TensorR0 _ -> 1
 
     static member inline Add(t0: Tensor<'TData>, t1: Tensor<'TData>): Tensor<'TData> =
       match (t0, t1) with
-      | R2 m0, R2 m1 -> (m0 + m1) |> R2
-      | R2 m0, R1 v1 -> (m0 + DenseMatrix.ofColumnSeq (Enumerable.Repeat(v1, m0.ColumnCount))) |> R2
-      | R2 m0, R0 s1 -> m0.Add(s1) |> R2
+      | TensorR2 m0, TensorR2 m1 -> (m0 + m1) |> TensorR2
+      | TensorR2 m0, TensorR1 v1 -> (m0 + DenseMatrix.ofColumnSeq (Enumerable.Repeat(v1, m0.ColumnCount))) |> TensorR2
+      | TensorR2 m0, TensorR0 s1 -> m0.Add(s1) |> TensorR2
       | _ -> Prelude.undefined
 
     static member inline Subtract(t0: Tensor<'TData>, t1: Tensor<'TData>): Tensor<'TData> =
       match (t0, t1) with
-      | R2 m0, R2 m1 -> m0.Subtract(m1) |> R2
-      | R1 v0, R2 m1 -> (v0 - (m1.EnumerateColumns() |> Seq.reduce (+))) |> R1
+      | TensorR2 m0, TensorR2 m1 -> m0.Subtract(m1) |> TensorR2
+      | TensorR1 v0, TensorR2 m1 -> (v0 - (m1.EnumerateColumns() |> Seq.reduce (+))) |> TensorR1
       | _ -> Prelude.undefined
 
     static member inline Multiply(t0: Tensor<'TData>, t1: Tensor<'TData>): Tensor<'TData> =
       match (t0, t1) with
-      | R2 m0, R2 m1 -> m0.Multiply(m1) |> R2
-      | R2 m0, R0 s1 -> m0.Multiply(s1) |> R2
-      | R0 s0, R2 m1 -> m1.Multiply(s0) |> R2
+      | TensorR2 m0, TensorR2 m1 -> m0.Multiply(m1) |> TensorR2
+      | TensorR2 m0, TensorR0 s1 -> m0.Multiply(s1) |> TensorR2
+      | TensorR0 s0, TensorR2 m1 -> m1.Multiply(s0) |> TensorR2
       | _ -> Prelude.undefined
 
     static member inline Divide(t0: Tensor<'TData>, t1: Tensor<'TData>): Tensor<'TData> =
       match (t0, t1) with
-      | R2 m0, R2 m1 -> m0.PointwiseDivide(m1) |> R2
-      | R2 m0, R0 s1 -> m0.Divide(s1) |> R2
+      | TensorR2 m0, TensorR2 m1 -> m0.PointwiseDivide(m1) |> TensorR2
+      | TensorR2 m0, TensorR0 s1 -> m0.Divide(s1) |> TensorR2
       | _ -> Prelude.undefined
 
     static member inline ( + ) (t0, t1): Tensor<'TData> = Tensor<'TData>.Add(t0, t1)
@@ -77,72 +77,72 @@ type Tensor =
   [<Extension>]
   static member inline Negate(t: Tensor<'TData>): Tensor<'TData> =
     match t with
-    | R2 m -> m.Negate() |> R2
+    | TensorR2 m -> m.Negate() |> TensorR2
     | _ -> Prelude.undefined
 
   [<Extension>]
   static member inline PointwiseExp(t: Tensor<'TData>): Tensor<'TData> =
     match t with
-    | R2 m -> m.PointwiseExp() |> R2
+    | TensorR2 m -> m.PointwiseExp() |> TensorR2
     | _ -> Prelude.undefined
 
   [<Extension>]
   static member inline PointwisePower(t: Tensor<'TData>, exponent: 'TData): Tensor<'TData> =
     match t with
-    | R2 m -> m.PointwisePower(exponent) |> R2
+    | TensorR2 m -> m.PointwisePower(exponent) |> TensorR2
     | _ -> Prelude.undefined
 
   [<Extension>]
   static member inline Add(t0: Tensor<'TData>, x: 'TData): Tensor<'TData> =
-    t0 + (x |> R0)
+    t0 + (x |> TensorR0)
 
   [<Extension>]
   static member inline PointwiseMultiply(t0: Tensor<'TData>, t1: Tensor<'TData>): Tensor<'TData> =
     match t0, t1 with
-    | R2 m0, R2 m1 -> m0.PointwiseMultiply(m1) |> R2
-    | R0 s0, R2 m1 -> m1.Multiply(s0) |> R2
-    | R0 s0, R0 s1 -> (s0 * s1) |> R0
+    | TensorR2 m0, TensorR2 m1 -> m0.PointwiseMultiply(m1) |> TensorR2
+    | TensorR0 s0, TensorR2 m1 -> m1.Multiply(s0) |> TensorR2
+    | TensorR0 s0, TensorR0 s1 -> (s0 * s1) |> TensorR0
     | _ -> Prelude.undefined
 
   [<Extension>]
   static member inline PointwiseDivide(t0: Tensor<'TData>, t1: Tensor<'TData>): Tensor<'TData> =
     match t0, t1 with
-    | R2 m0, R2 m1 -> m0.PointwiseDivide(m1) |> R2
-    | R2 m0, R0 s1 -> (m0 / s1) |> R2
+    | TensorR2 m0, TensorR2 m1 -> m0.PointwiseDivide(m1) |> TensorR2
+    | TensorR2 m0, TensorR0 s1 -> (m0 / s1) |> TensorR2
     | _ -> Prelude.undefined
 
   [<Extension>]
   static member inline TransposeAndMultiply(t0: Tensor<'TData>, t1: Tensor<'TData>): Tensor<'TData> =
     match t0, t1 with
-    | R2 m0, R2 m1 -> m0.TransposeAndMultiply(m1) |> R2
+    | TensorR2 m0, TensorR2 m1 -> m0.TransposeAndMultiply(m1) |> TensorR2
     | _ -> Prelude.undefined
 
   [<Extension>]
   static member inline TransposeThisAndMultiply(t0: Tensor<'TData>, t1: Tensor<'TData>): Tensor<'TData> =
     match t0, t1 with
-    | R2 m0, R2 m1 -> m0.TransposeThisAndMultiply(m1) |> R2
+    | TensorR2 m0, TensorR2 m1 -> m0.TransposeThisAndMultiply(m1) |> TensorR2
     | _ -> Prelude.undefined
 
   [<Extension>]
   static member inline PointwiseLog(t: Tensor<'TData>): Tensor<'TData> =
     match t with
-    | R2 m -> m.PointwiseLog() |> R2
+    | TensorR2 m -> m.PointwiseLog() |> TensorR2
     | _ -> Prelude.undefined
 
   [<Extension>]
   static member inline Sum(t: Tensor<'TData>): 'TData =
     match t with
-    | R2 m -> m.ColumnSums().Sum()
-    | R1 v -> v.Sum()
-    | R0 s -> s
+    | TensorR2 m -> m.ColumnSums().Sum()
+    | TensorR1 v -> v.Sum()
+    | TensorR0 s -> s
 
 module Tensor =
   let createRandomizedR2 seed rows cols scale =
-    let t0 = DenseMatrix.random<double> rows cols (Normal.WithMeanVariance(0.0, 1.0, Random(seed))) |> R2
-    let t1 = Math.Sqrt(2. / double cols) * scale |> R0
+    let t0 = DenseMatrix.random<double> rows cols (Normal.WithMeanVariance(0.0, 1.0, Random(seed))) |> TensorR2
+    let t1 = Math.Sqrt(2. / double cols) * scale |> TensorR0
     t0 * t1
 
   let createZerosR1 n =
-    DenseVector.zero<double> n |> R1
+    DenseVector.zero<double> n |> TensorR1
 
-  let ofListOfList (rs: double list list) = rs |> array2D |> CreateMatrix.DenseOfArray |> R2
+  let ofListOfList (rs: double list list) = rs |> array2D |> CreateMatrix.DenseOfArray |> TensorR2
