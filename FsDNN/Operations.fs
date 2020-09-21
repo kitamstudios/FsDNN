@@ -66,12 +66,12 @@ module Operations =
     | OpMultiply -> Multiply.forwardPropagate arg0 arg1
     | OpCrossEntropyLoss -> BinaryCrossEntropyLoss.forwardPropagate arg0 arg1
 
-  let backPropagateOp1 (iValues: Map<string, Tensor<double>[]>) inG id op =
+  let backPropagateOp1 (cache: Map<string, Tensor<double>[]>) inG id op =
     match op with
-    | OpSigmoid -> Sigmoid.backPropagate inG iValues.[id].[0]
+    | OpSigmoid -> Sigmoid.backPropagate inG cache.[id].[0]
 
-  let backPropagateOp2 (iValues: Map<string, Tensor<double>[]>) inG id op =
-    let args = iValues.[id]
+  let backPropagateOp2 (cache: Map<string, Tensor<double>[]>) inG id op =
+    let args = cache.[id]
     match op with
     | OpAdd -> Add.backPropagate inG args.[0] args.[1]
     | OpMultiply -> Multiply.backPropagate inG args.[0] args.[1]

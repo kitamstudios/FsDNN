@@ -50,6 +50,7 @@ let ``trainWithGD - logistic regression - OR function`` () =
   n.Parameters.["b1"] |> shouldBeEquivalentTo [ [ 0.010229874835574478 ] ]
 
   let Y' = X |> Net.predict n
+
   Y' |> shouldBeEquivalentTo [[0.50255745; 0.43052177; 0.39085974; 0.32439376]]
 
 [<Fact>]

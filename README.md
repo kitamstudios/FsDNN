@@ -11,7 +11,8 @@
 
 ## Features
 
-- [x] Written in F#/.NET Core 3 using [Math.NET Numerics on MKL](https://numerics.mathdotnet.com/) 
+- [x] Written in F#/.NET Core 3 using [Math.NET Numerics on MKL](https://numerics.mathdotnet.com/)
+- [x] Computation Graph 
 - [x] Test driven generic & Easily extensible vectorized FC DNN Library
 - [ ] Activations: ReLU, Sigmoid
 - [ ] Cost Functions: Cross entropy, MSE

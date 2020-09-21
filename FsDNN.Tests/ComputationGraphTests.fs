@@ -45,10 +45,10 @@ let ``Simple forward`` () =
 
   let parameters = Map.empty |> Map.add "Arg0" 1 |> Map.add "Arg1" 2
 
-  let J, iValues = ComputationGraph.forward (forwardArg parameters) forwardOp1 forwardOp2 g
+  let J, cache = ComputationGraph.forward (forwardArg parameters) forwardOp1 forwardOp2 g
   J |> should equal 3
 
-  iValues |> Map.toList |> should equal [ "OpAdd", [| 1; 2 |] ]
+  cache |> Map.toList |> should equal [ "OpAdd", [| 1; 2 |] ]
 
 [<Fact>]
 let ``Complex predict`` () =
@@ -85,22 +85,22 @@ let ``Complex forward`` () =
 
   let parameters = Map.empty |> Map.add "OpMul-Arg0" 4 |> Map.add "OpAdd-Arg0" 1 |> Map.add "OpAdd-Arg1" 2
 
-  let J, iValues = ComputationGraph.forward (forwardArg parameters) forwardOp1 forwardOp2 g
+  let J, cache = ComputationGraph.forward (forwardArg parameters) forwardOp1 forwardOp2 g
   J |> should equal 144
 
-  iValues |> Map.toList |> List.sortBy fst |> should equal [ ("OpAdd", [| 1; 2 |]); ("OpMul", [| 4; 3 |]); ("OpSquare", [| 12 |]) ]
+  cache |> Map.toList |> List.sortBy fst |> should equal [ ("OpAdd", [| 1; 2 |]); ("OpMul", [| 4; 3 |]); ("OpSquare", [| 12 |]) ]
 
-let backPropOp1 (iValues: Map<string, int[]>) inG id op =
+let backPropOp1 (cache: Map<string, int[]>) inG id op =
   match op with
   | OpSquare ->
-    inG * 2 * (iValues |> Map.find id).[0]
+    inG * 2 * (cache |> Map.find id).[0]
 
-let backPropOp2 (iValues: Map<string, int[]>) inG id op =
+let backPropOp2 (cache: Map<string, int[]>) inG id op =
   match op with
   | OpAdd ->
     (inG, inG)
   | OpMul ->
-    let outGs = iValues |> Map.find id
+    let outGs = cache |> Map.find id
     (inG * outGs.[1], inG * outGs.[0])
 
 [<Fact>]
@@ -112,8 +112,8 @@ let ``Simple back propagate`` () =
 
   let parameters = Map.empty |> Map.add "Arg0" 1 |> Map.add "Arg1" 2
 
-  let _, iValues = ComputationGraph.forward (forwardArg parameters)  forwardOp1 forwardOp2 g
-  let gradients = ComputationGraph.backPropagate (backPropOp1 iValues) (backPropOp2 iValues) 1 g
+  let _, cache = ComputationGraph.forward (forwardArg parameters)  forwardOp1 forwardOp2 g
+  let gradients = ComputationGraph.backPropagate (backPropOp1 cache) (backPropOp2 cache) 1 g
 
   gradients |> Map.toList |> List.sortBy fst |> should equal [("Arg0", 2); ("Arg1", 1)]
 
@@ -127,8 +127,8 @@ let ``Simple back propagate - without gradient tracking`` () =
 
   let parameters = Map.empty |> Map.add "Arg0" 1 |> Map.add "Arg1" 2
 
-  let _, iValues = ComputationGraph.forward (forwardArg parameters)  forwardOp1 forwardOp2 g
-  let gradients = ComputationGraph.backPropagate (backPropOp1 iValues) (backPropOp2 iValues) 1 g
+  let _, cache = ComputationGraph.forward (forwardArg parameters)  forwardOp1 forwardOp2 g
+  let gradients = ComputationGraph.backPropagate (backPropOp1 cache) (backPropOp2 cache) 1 g
 
   gradients |> Map.toList |> List.sortBy fst |> should equal [("Arg1", 1)]
 
@@ -148,7 +148,7 @@ let ``Complex back propagate`` () =
                                    Arg1 = Arg {| Id = "OpAdd-Arg1"; TrackGradient = true |} |} |} |}
 
   let parameters = Map.empty |> Map.add "OpMul-Arg0" 4 |> Map.add "OpAdd-Arg0" 1 |> Map.add "OpAdd-Arg1" 2
-  let _, iValues = ComputationGraph.forward (forwardArg parameters) forwardOp1 forwardOp2 g
-  let gradients = ComputationGraph.backPropagate (backPropOp1 iValues) (backPropOp2 iValues) 1 g
+  let _, cache = ComputationGraph.forward (forwardArg parameters) forwardOp1 forwardOp2 g
+  let gradients = ComputationGraph.backPropagate (backPropOp1 cache) (backPropOp2 cache) 1 g
 
   gradients |> Map.toList |> List.sortBy fst |> should equal [("OpAdd-Arg0", 96); ("OpAdd-Arg1", 96); ("OpMul-Arg0", 72)]

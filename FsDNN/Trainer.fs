@@ -95,10 +95,10 @@ module Trainer =
     | NoOptimization -> _updateParametersWithNoOptimization hp.LearningRate ts.Parameters gradients
     | _ -> Prelude.undefined
 
-  let private _trainNetworkFor1MiniBatch net hp (J: Tensor<double>, ts: TrainingState, timer: Stopwatch) (X: Tensor<double>, Y: Tensor<double>): (Tensor<double> * TrainingState * Stopwatch) =
+  let private _trainNetworkFor1MiniBatch net hp (_: Tensor<double>, ts: TrainingState, timer: Stopwatch) (X: Tensor<double>, Y: Tensor<double>): (Tensor<double> * TrainingState * Stopwatch) =
     timer.Start()
-    let J', iValues = Net.forwardPropagate { net with Parameters = ts.Parameters } X Y
-    let gradients = Net.backPropagate net iValues
+    let J', cache = Net.forwardPropagate { net with Parameters = ts.Parameters } X Y
+    let gradients = Net.backPropagate net cache
     let ts = _updateParameters hp ts gradients
     timer.Stop()
     let m = X.ColumnCount
@@ -120,7 +120,8 @@ module Trainer =
     ts
 
   let trainWithGD (callback: EpochCallback) (net: Net) (X: Tensor<double>) (Y: Tensor<double>) (hp: HyperParameters) : Net =
-    assert (X.ColumnCount = Y.ColumnCount)
+    if X.ColumnCount <> Y.ColumnCount then
+      failwithf "Column count of X (%d) is not the same as that of Y (%d)." X.ColumnCount Y.ColumnCount
 
     let timer = Stopwatch()
 

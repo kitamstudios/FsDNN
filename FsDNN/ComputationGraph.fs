@@ -3,6 +3,15 @@
 [<AutoOpen>]
 module ComputationGraphDomain =
 
+  type Op1Forward<'TData> = 'TData -> 'TData
+
+  type Op2Forward<'TData> = 'TData -> 'TData -> 'TData
+
+  type Op1BackPropagate<'TData> = ('TData -> string -> 'TData)
+
+  type Op2BackPropagate<'TData> = ('TData -> string -> 'TData * 'TData)
+
+
   type ComputationGraph<'TData, 'TOp1, 'TOp2> =
     | Arg of {| Id: string; TrackGradient: bool |}
     | Op1 of {| Id: string; Op: 'TOp1; Arg: ComputationGraph<'TData, 'TOp1, 'TOp2>; |}
@@ -57,8 +66,8 @@ module ComputationGraph =
       let m = (id, [| arg0; arg1 |]) :: m
       ret, m
 
-    let J, iValues = cata fArg' fOp1' fOp2' g
-    J, iValues |> Map.ofList
+    let J, cache = cata fArg' fOp1' fOp2' g
+    J, cache |> Map.ofList
 
   let predict fArg fOp1 fOp2 (g: ComputationGraph<'TData, 'TOperation1, 'TOperation2>) =
     let fArg' id _ =

@@ -126,5 +126,5 @@ module Net =
     let parameters = n.Parameters |> Map.add "X" X |> Map.add "Y" Y
     ComputationGraph.forward (Operations.forwardArg parameters) Operations.forwardOp1 Operations.forwardOp2 n.LossGraph
 
-  let backPropagate n iValues =
-    ComputationGraph.backPropagate (Operations.backPropagateOp1 iValues) (Operations.backPropagateOp2 iValues) Scalar1 n.LossGraph
+  let backPropagate n cache =
+    ComputationGraph.backPropagate (Operations.backPropagateOp1 cache) (Operations.backPropagateOp2 cache) Scalar1 n.LossGraph
