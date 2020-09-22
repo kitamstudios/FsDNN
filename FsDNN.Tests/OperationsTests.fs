@@ -74,6 +74,30 @@ module BinaryCrossEntropyLoss =
     (dArg0) |> shouldBeEquivalentTo inGArray
     (arg1 - dArg1) |> shouldBeEquivalentTo [ [ -2.98722326; 2.01613236; 2.00236119 ] ]
 
+module MeanSquaredErrorLoss =
+  [<Fact>]
+  let ``forwardPropagate - simple``() =
+    let arg0 = [ [ 1.; 2.; 3. ] ] |> Tensor.ofListOfList
+    let arg1 = [ [ 4.; 5.; 6. ] ] |> Tensor.ofListOfList
+
+    let it = MeanSquaredErrorLoss.forwardPropagate arg0 arg1
+
+    it |> shouldBeEquivalentTo [ [ 4.5 ] ]
+
+  [<Fact>]
+  let ``backPropagate - simple``() =
+    let id = "node"
+    let arg0 = [ [ 1.; 2.; 3. ] ] |> Tensor.ofListOfList
+    let arg1 = [ [ 4.; 5.; 6. ] ] |> Tensor.ofListOfList
+    let cache = Map.empty |> Map.add id [| arg0; arg1 |]
+    let inGArray = [ [ 2.; 2.; 2. ] ]
+    let inG = inGArray |> Tensor.ofListOfList
+
+    let dArg0, dArg1 = MeanSquaredErrorLoss.backPropagate cache id inG
+
+    (dArg0) |> shouldBeEquivalentTo inGArray
+    (arg1 - dArg1) |> shouldBeEquivalentTo [ [ 2.; 3.; 4. ] ]
+
 module Sigmoid =
   [<Fact>]
   let ``forwardPropagate - simple``() =

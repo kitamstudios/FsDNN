@@ -40,19 +40,21 @@ module NetDomain =
   type InputLayer =
     { N: int }
 
-  type FullyConnectedLayer =
+  type HiddenLayer =
     | FullyConnectedLayer of {| N: int |}
 
     member this.N =
       match this with
       | FullyConnectedLayer l -> l.N
 
-  type CrossEntropyLossLayer =
-    | CrossEntropyLossLayer of {| Classes: int |}
+  type LossLayer =
+    | BinaryCrossEntropy
+    | MeanSquaredErrorError
 
     member this.Classes =
       match this with
-      | CrossEntropyLossLayer s -> s.Classes
+      | BinaryCrossEntropy -> 1
+      | MeanSquaredErrorError -> 1
 
   type ComputationGraph = ComputationGraph<Tensor<double>>
 
@@ -83,34 +85,52 @@ module Net =
     |> Map.ofList
 
   let private _createComputationGraphForOneLayer prevLayerCG id: ComputationGraph =
-    let g = Op1 {| Id = "OpSigmoid"
-                   Functions = Operations.Sigmoid.Functions
-                   Arg =
-                     Op2 {| Id = "OpAdd"
-                            Functions = Operations.Add.Functions
-                            Arg0 =
-                              Op2 {| Id = "OpMultiply"
-                                     Functions = Operations.Multiply.Functions
-                                     Arg0 = Arg {| Id = sprintf "W%d" id; TrackGradient = true |}
-                                     Arg1 = prevLayerCG |}
-                            Arg1 = Arg {| Id = sprintf "b%d" id; TrackGradient = true |} |} |}
+     Op2 {| Id = Operations.Add.Definition.Name
+            Functions = Operations.Add.Definition.Functions
+            Arg0 =
+              Op2 {| Id = Operations.Multiply.Definition.Name
+                     Functions = Operations.Multiply.Definition.Functions
+                     Arg0 = Arg {| Id = sprintf "W%d" id; TrackGradient = true |}
+                     Arg1 = prevLayerCG |}
+            Arg1 = Arg {| Id = sprintf "b%d" id; TrackGradient = true |} |}
 
-    g
+  let _makeImplicitHiddenLayerForLossLayer g lossLayer =
+    let fns =
+      match lossLayer with
+      | BinaryCrossEntropy -> Operations.Sigmoid.Definition.Functions
+      | MeanSquaredErrorError -> Operations.Linear.Functions
 
-  let private _createComputationGraphForPrediction (hiddenLayers: FullyConnectedLayer list) (lossLayer: CrossEntropyLossLayer): ComputationGraph =
+    Op1 {| Id = Operations.Sigmoid.Definition.Name
+           Functions = fns
+           Arg = g |}
+
+  let private _createComputationGraphForPrediction (hiddenLayers: HiddenLayer list) (lossLayer: LossLayer): ComputationGraph =
     let g0 = Arg {| Id = "X"; TrackGradient = false |}
 
-    (hiddenLayers |> List.map (fun l -> l.N)) @ [lossLayer.Classes]
-    |> List.fold (fun (g, id) _ -> _createComputationGraphForOneLayer g id, id + 1) (g0, 1)
-    |> fst
+    let g =
+      (hiddenLayers |> List.map (fun l -> l.N)) @ [lossLayer.Classes]
+      |> List.fold (fun (g, id) _ -> _createComputationGraphForOneLayer g id, id + 1) (g0, 1)
+      |> fst
 
-  let makeLayers seed heScale (inputLayer: InputLayer) (hiddenLayers: FullyConnectedLayer list) (lossLayer: CrossEntropyLossLayer): Net =
+    _makeImplicitHiddenLayerForLossLayer g lossLayer
+
+  let private _makeLossLayer lossLayer g =
+    let fns =
+      match lossLayer with
+      | BinaryCrossEntropy -> Operations.BinaryCrossEntropyLoss.Definition
+      | MeanSquaredErrorError _ -> Operations.MeanSquaredErrorLoss.Definition
+
+    let lg = Op2 {| Id = fns.Name
+                    Functions = fns.Functions
+                    Arg0 = Arg {| Id = "Y"; TrackGradient = false |}
+                    Arg1 = g |}
+
+    lg
+
+  let makeLayers seed heScale (inputLayer: InputLayer) (hiddenLayers: HiddenLayer list) (lossLayer: LossLayer): Net =
     let pg = _createComputationGraphForPrediction hiddenLayers lossLayer
 
-    let lg = Op2 {| Id = "LossLayer"
-                    Functions = Operations.BinaryCrossEntropyLoss.Functions
-                    Arg0 = Arg {| Id = "Y"; TrackGradient = false |}
-                    Arg1 = pg |}
+    let lg = _makeLossLayer lossLayer pg
 
     let ps = _initializeParameters seed heScale [ inputLayer.N; lossLayer.Classes ]
 
@@ -130,4 +150,5 @@ module Net =
     ComputationGraph.forward (_forwardArg parameters) n.LossGraph
 
   let backPropagate n cache =
-    ComputationGraph.backPropagate (fun x -> x cache) (fun x -> x cache) Scalar1 n.LossGraph
+    let inline f x = x cache
+    ComputationGraph.backPropagate f f Scalar1 n.LossGraph
