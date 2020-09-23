@@ -47,14 +47,18 @@ module NetDomain =
       match this with
       | FullyConnectedLayer l -> l.N
 
+  /// Following has the exhaustive list
+  /// https://machinelearningmastery.com/how-to-choose-loss-functions-when-training-deep-learning-neural-networks/
   type LossLayer =
-    | BinaryCrossEntropy
-    | MeanSquaredErrorError
+    | BCEWithLogitsLossLayer
+    | CCEWithLogitsLossLayer of {| Classes: int  |}
+    | MSELossLayer
 
     member this.Classes =
       match this with
-      | BinaryCrossEntropy -> 1
-      | MeanSquaredErrorError -> 1
+      | BCEWithLogitsLossLayer -> 1
+      | CCEWithLogitsLossLayer l -> l.Classes
+      | MSELossLayer -> 1
 
   type ComputationGraph = ComputationGraph<Tensor<double>>
 
@@ -97,8 +101,9 @@ module Net =
   let _makeImplicitHiddenLayerForLossLayer g lossLayer =
     let fns =
       match lossLayer with
-      | BinaryCrossEntropy -> Operations.Sigmoid.Definition.Functions
-      | MeanSquaredErrorError -> Operations.Linear.Functions
+      | BCEWithLogitsLossLayer -> Operations.Sigmoid.Definition.Functions
+      | CCEWithLogitsLossLayer _ -> Operations.Linear.Functions
+      | MSELossLayer -> Operations.Linear.Functions
 
     Op1 {| Id = Operations.Sigmoid.Definition.Name
            Functions = fns
@@ -117,15 +122,14 @@ module Net =
   let private _makeLossLayer lossLayer g =
     let fns =
       match lossLayer with
-      | BinaryCrossEntropy -> Operations.BinaryCrossEntropyLoss.Definition
-      | MeanSquaredErrorError _ -> Operations.MeanSquaredErrorLoss.Definition
+      | BCEWithLogitsLossLayer -> Operations.BCEWithLogitsLoss.Definition
+      | CCEWithLogitsLossLayer _ -> Operations.CCEWithLogitsLoss.Definition
+      | MSELossLayer _ -> Operations.MSELoss.Definition
 
-    let lg = Op2 {| Id = fns.Name
-                    Functions = fns.Functions
-                    Arg0 = Arg {| Id = "Y"; TrackGradient = false |}
-                    Arg1 = g |}
-
-    lg
+    Op2 {| Id = fns.Name
+           Functions = fns.Functions
+           Arg0 = Arg {| Id = "Y"; TrackGradient = false |}
+           Arg1 = g |}
 
   let makeLayers seed heScale (inputLayer: InputLayer) (hiddenLayers: HiddenLayer list) (lossLayer: LossLayer): Net =
     let pg = _createComputationGraphForPrediction hiddenLayers lossLayer

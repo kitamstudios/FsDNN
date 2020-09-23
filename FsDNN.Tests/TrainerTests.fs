@@ -6,7 +6,7 @@ open System.Collections.Generic
 
 [<Fact>]
 let ``trainWithGD - single perceptron - logistic regression`` () =
-  let n = Net.makeLayers 1 1.0 { N = 2 } [] BinaryCrossEntropy
+  let n = Net.makeLayers 1 1.0 { N = 2 } [] BCEWithLogitsLossLayer
 
   // OR function
   let X = [ [ 0.; 1.; 0.; 1. ]
@@ -32,7 +32,7 @@ let ``trainWithGD - single perceptron - logistic regression`` () =
 
 [<Fact>]
 let ``trainWithGD - single perceptron - linear regression`` () =
-  let n = Net.makeLayers 1 1.0 { N = 1 } [] MeanSquaredErrorError
+  let n = Net.makeLayers 1 1.0 { N = 1 } [] MSELossLayer
 
   // y = 3x + 4 with randomness - refer https://repl.it/@parthopdas/linearregression#main.py
   let X = [ [8.34044009e-01; 1.44064899e+00; 2.28749635e-04; 6.04665145e-01; 2.93511782e-01; 1.84677190e-01; 3.72520423e-01; 6.91121454e-01; 7.93534948e-01; 1.07763347e+00] ] |> Tensor.ofListOfList

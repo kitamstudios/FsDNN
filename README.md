@@ -11,17 +11,51 @@
 
 ## Features
 
+
+### Core
+
 - [x] Written in F#/.NET Core 3 using [Math.NET Numerics on MKL](https://numerics.mathdotnet.com/)
-- [x] Computation Graph 
-- [x] Test driven generic & Easily extensible vectorized FC DNN Library
-- [ ] Activations: ReLU, Sigmoid
-- [ ] Cost Functions: Cross entropy, MSE
-- [ ] Initializations: He
-- [ ] Regularization: L2, Dropout
-- [ ] Optimization: MBGD, Momentum, ADAM
+- [x] Componentized - each of the aspects below can be tested and extended on it own
+- [x] Entirely Test Driven Developed
+- [x] Static Computation Graph
+- [x] Tensor abstraction (Uniform API for Matrix/Vector with minimal broadcasting support)
+
+### Initializations
+
+- [x] He
 - [ ] Basic transfer learning
 - [ ] Gradient checking
-- [ ] Demos
+
+### Activations: 
+
+- [x] Linear
+- [ ] ReLU
+- [x] Sigmoid
+- [ ] TanH
+
+### Cost Functions
+
+- [x] Mean squared error
+- [x] Binary Cross entropy (on Sigmoid)
+- [ ] Categorical Cross entropy (on SoftMax)
+
+### Optimization
+
+- [x] Batch Gradient Descent
+- [ ] Stochastic/Mini-Batch  Gradient Descent
+- [ ] Momentum
+- [ ] ADAM
+
+### Regularization
+
+- [ ] L2
+- [ ] Dropout
+
+### Demos
+
+- [ ] MNIST
+- [ ] ?Multilabel?
+- [ ] ?Regression?
 
 ## Performance
 

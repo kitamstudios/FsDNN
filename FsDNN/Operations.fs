@@ -39,7 +39,7 @@ module Operations =
       { Name = "Multiply"
         Functions = { F = forwardPropagate; B = backPropagate } }
 
-  module BinaryCrossEntropyLoss =
+  module BCEWithLogitsLoss =
     let forwardPropagate (Y: Tensor<double>) (Ŷ: Tensor<double>): Tensor<double> =
       let c =
         Y.PointwiseMultiply(Ŷ.PointwiseLog()) +
@@ -58,10 +58,25 @@ module Operations =
       (g0, inG.PointwiseMultiply(g1))
 
     let Definition: Operation2Definition<_> =
-      { Name = "BinaryCrossEntropyLoss"
+      { Name = "BCEWithLogitsLoss"
         Functions = { F = forwardPropagate; B = backPropagate } }
 
-  module MeanSquaredErrorLoss =
+  module CCEWithLogitsLoss =
+    let forwardPropagate (Y: Tensor<double>) (Ŷ: Tensor<double>): Tensor<double> =
+      (Y.Negate().PointwiseMultiply(Ŷ.PointwiseLog())).Sum() |> TensorR0
+
+    let backPropagate (cache: Cache<Tensor<double>>) id (inG: Tensor<double>) =
+      let g0 = inG
+      let Y = cache.[id].[0]
+      let Ŷ = cache.[id].[1]
+      let g1 = Ŷ - Y
+      (g0, inG.PointwiseMultiply(g1))
+
+    let Definition: Operation2Definition<_> =
+      { Name = "CCEWithLogitsLoss"
+        Functions = { F = forwardPropagate; B = backPropagate } }
+
+  module MSELoss =
     let forwardPropagate (Y: Tensor<double>) (Ŷ: Tensor<double>): Tensor<double> =
       let c = (Ŷ - Y).PointwisePower(2.)
       let m = double Y.ColumnCount
@@ -77,7 +92,7 @@ module Operations =
       (g0, inG.PointwiseMultiply(g1))
 
     let Definition: Operation2Definition<_> =
-      { Name = "MeanSquaredErrorLoss"
+      { Name = "MSELoss"
         Functions = { F = forwardPropagate; B = backPropagate } }
 
   module Sigmoid =
