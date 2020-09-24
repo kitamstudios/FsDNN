@@ -10,7 +10,7 @@ let forwardArg parameters id: int =
 module Operations =
   module Add =
     let f arg0 arg1 =
-      arg0 + arg1
+      [| arg0 + arg1; arg0; arg1 |]
 
     let b _ _ inG =
       (inG, inG)
@@ -19,27 +19,27 @@ module Operations =
 
   module Multiply =
     let f arg0 arg1 =
-      arg0 * arg1
+      [| arg0 * arg1; arg0; arg1 |]
 
     let b (cache: Cache<int>) id inG =
       let outGs = cache |> Map.find id
-      (inG * outGs.[1], inG * outGs.[0])
+      (inG * outGs.[2], inG * outGs.[1])
 
     let Functions : Op2Functions<_> = { F = f; B = b }
 
   module Square =
     let f arg =
-      arg * arg
+      [| arg * arg; arg |]
 
     let b (cache: Cache<int>) id inG =
-      inG * 2 * (cache |> Map.find id).[0]
+      inG * 2 * (cache |> Map.find id).[1]
 
     let Functions : Op1Functions<_> = { F = f; B = b }
 
 [<Fact>]
 let ``Simple predict`` () =
-  let g = Op2 {| Id = "OpAdd"
-                 Functions = Operations.Add.Functions
+  let g = Op2 {| D = { Name = "OpAdd"
+                       Functions = Operations.Add.Functions }
                  Arg0 = Arg {| Id = "Arg0"; TrackGradient = true |}
                  Arg1 = Arg {| Id = "Arg1"; TrackGradient = true |} |}
 
@@ -50,8 +50,8 @@ let ``Simple predict`` () =
 
 [<Fact>]
 let ``Simple forward`` () =
-  let g = Op2 {| Id = "OpAdd"
-                 Functions = Operations.Add.Functions
+  let g = Op2 {| D = { Name = "OpAdd"
+                       Functions = Operations.Add.Functions }
                  Arg0 = Arg {| Id = "Arg0"; TrackGradient = true |}
                  Arg1 = Arg {| Id = "Arg1"; TrackGradient = true |} |}
 
@@ -60,19 +60,19 @@ let ``Simple forward`` () =
   let J, cache = ComputationGraph.forward (forwardArg parameters) g
   J |> should equal 3
 
-  cache |> Map.toList |> should equal [ "OpAdd", [| 1; 2 |] ]
+  cache |> Map.toList |> should equal [ "OpAdd", [| 3; 1; 2 |] ]
 
 [<Fact>]
 let ``Complex predict`` () =
-  let g = Op1 {| Id = "OpSquare"
-                 Functions = Operations.Square.Functions
+  let g = Op1 {| D = { Name = "OpSquare"
+                       Functions = Operations.Square.Functions }
                  Arg =
-                   Op2 {| Id = "OpMul"
-                          Functions = Operations.Multiply.Functions
+                   Op2 {| D = { Name = "OpMul"
+                                Functions = Operations.Multiply.Functions }
                           Arg0 = Arg {| Id = "OpMul-Arg0"; TrackGradient = true |}
                           Arg1 =
-                            Op2 {| Id = "OpAdd"
-                                   Functions = Operations.Add.Functions
+                            Op2 {| D = { Name = "OpAdd"
+                                         Functions = Operations.Add.Functions }
                                    Arg0 = Arg {| Id = "OpAdd-Arg0"; TrackGradient = true |}
                                    Arg1 = Arg {| Id = "OpAdd-Arg1"; TrackGradient = true |} |} |} |}
 
@@ -83,15 +83,15 @@ let ``Complex predict`` () =
 
 [<Fact>]
 let ``Complex forward`` () =
-  let g = Op1 {| Id = "OpSquare"
-                 Functions = Operations.Square.Functions
+  let g = Op1 {| D = { Name = "OpSquare"
+                       Functions = Operations.Square.Functions }
                  Arg =
-                   Op2 {| Id = "OpMul"
-                          Functions = Operations.Multiply.Functions
+                   Op2 {| D = { Name = "OpMul"
+                                Functions = Operations.Multiply.Functions }
                           Arg0 = Arg {| Id = "OpMul-Arg0"; TrackGradient = true |}
                           Arg1 =
-                            Op2 {| Id = "OpAdd"
-                                   Functions = Operations.Add.Functions
+                            Op2 {| D = { Name = "OpAdd"
+                                         Functions = Operations.Add.Functions }
                                    Arg0 = Arg {| Id = "OpAdd-Arg0"; TrackGradient = true |}
                                    Arg1 = Arg {| Id = "OpAdd-Arg1"; TrackGradient = true |} |} |} |}
 
@@ -100,12 +100,12 @@ let ``Complex forward`` () =
   let J, cache = ComputationGraph.forward (forwardArg parameters) g
   J |> should equal 144
 
-  cache |> Map.toList |> List.sortBy fst |> should equal [ ("OpAdd", [| 1; 2 |]); ("OpMul", [| 4; 3 |]); ("OpSquare", [| 12 |]) ]
+  cache |> Map.toList |> List.sortBy fst |> should equal [ ("OpAdd", [| 3; 1; 2 |]); ("OpMul", [| 12; 4; 3 |]); ("OpSquare", [| 144; 12 |]) ]
 
 [<Fact>]
 let ``Simple back propagate`` () =
-  let g = Op2 {| Id = "OpMul"
-                 Functions = Operations.Multiply.Functions
+  let g = Op2 {| D = { Name = "OpMul"
+                       Functions = Operations.Multiply.Functions }
                  Arg0 = Arg {| Id = "Arg0"; TrackGradient = true |}
                  Arg1 = Arg {| Id = "Arg1"; TrackGradient = true |} |}
 
@@ -119,8 +119,8 @@ let ``Simple back propagate`` () =
 
 [<Fact>]
 let ``Simple back propagate - without gradient tracking`` () =
-  let g = Op2 {| Id = "OpMul"
-                 Functions = Operations.Multiply.Functions
+  let g = Op2 {| D = { Name = "OpMul"
+                       Functions = Operations.Multiply.Functions }
                  Arg0 = Arg {| Id = "Arg0"; TrackGradient = false |}
                  Arg1 = Arg {| Id = "Arg1"; TrackGradient = true |} |}
 
@@ -134,15 +134,15 @@ let ``Simple back propagate - without gradient tracking`` () =
 
 [<Fact>]
 let ``Complex back propagate`` () =
-  let g = Op1 {| Id = "OpSquare"
-                 Functions = Operations.Square.Functions
+  let g = Op1 {| D = { Name = "OpSquare"
+                       Functions = Operations.Square.Functions }
                  Arg =
-                   Op2 {| Id = "OpMul"
-                          Functions = Operations.Multiply.Functions
+                   Op2 {| D = { Name = "OpMul"
+                                Functions = Operations.Multiply.Functions }
                           Arg0 = Arg {| Id = "OpMul-Arg0"; TrackGradient = true |}
                           Arg1 =
-                            Op2 {| Id = "OpAdd"
-                                   Functions = Operations.Add.Functions
+                            Op2 {| D = { Name = "OpAdd"
+                                         Functions = Operations.Add.Functions }
                                    Arg0 = Arg {| Id = "OpAdd-Arg0"; TrackGradient = true |}
                                    Arg1 = Arg {| Id = "OpAdd-Arg1"; TrackGradient = true |} |} |} |}
 

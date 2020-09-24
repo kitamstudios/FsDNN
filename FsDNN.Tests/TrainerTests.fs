@@ -5,15 +5,11 @@ open Xunit
 open System.Collections.Generic
 
 (*
-v multiclass
-v add corresponding tests to net.predict
-x remove redundant test
 - Use cached value
   - in sigmoid backPropagate
   - in CCE backprop save value for softmax
 - collapse sigmoid/bce and remove id layer
 - Remove Tensor R0: lr should not be a tensor
-- move to definitions in computation graph, make functions private
 
 *)
 

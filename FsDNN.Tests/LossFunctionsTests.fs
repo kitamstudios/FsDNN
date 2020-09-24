@@ -11,20 +11,21 @@ module BCEWithLogitsLoss =
 
     let it = LossFunctions.BCEWithLogitsLoss.Definition.Functions.F arg0 arg1
 
-    it |> shouldBeEquivalentTo [ [ 0.43386458262986227 ] ]
+    it.[0] |> shouldBeEquivalentTo [ [ 0.43386458262986227 ] ]
+    it |> Array.tail |> shouldBeEquivalentToT2 [| arg0; arg1 |]
 
   [<Fact>]
   let ``backPropagate - simple``() =
     let id = "node"
     let arg0 = [ [ 0. ; 1. ; 1. ] ] |> Tensor.ofListOfList
     let arg1 = [ [ 0.73105858; 0.88079708; 0.95257413 ] ] |> Tensor.ofListOfList
-    let cache = Map.empty |> Map.add id [| arg0; arg1 |]
+    let cache = Map.empty |> Map.add id (LossFunctions.BCEWithLogitsLoss.Definition.Functions.F arg0 arg1)
     let inGArray = [ [ 3.; 3.; 3. ] ]
     let inG = inGArray |> Tensor.ofListOfList
 
     let dArg0, dArg1 = LossFunctions.BCEWithLogitsLoss.Definition.Functions.B cache id inG
 
-    (dArg0) |> shouldBeEquivalentTo inGArray
+    dArg0 |> shouldBeEquivalentTo inGArray
     (arg1 - dArg1) |> shouldBeEquivalentTo [ [ -2.98722326; 2.01613236; 2.00236119 ] ]
 
 module CCEWithLogitsLoss =
@@ -41,7 +42,8 @@ module CCEWithLogitsLoss =
 
     let it = LossFunctions.CCEWithLogitsLoss.Definition.Functions.F arg0 arg1
 
-    it |> shouldBeEquivalentTo [ [ 6.23951519 ] ]
+    it.[0] |> shouldBeEquivalentTo [ [ 6.23951519 ] ]
+    it |> Array.tail |> shouldBeEquivalentToT2 [| arg0; arg1 |]
 
   [<Fact>]
   let ``backPropagate - simple``() =
@@ -55,18 +57,12 @@ module CCEWithLogitsLoss =
                  [ 0.01708598; 0.98291402]
                  [ 0.0148185;  0.9851815 ] ] |> Tensor.ofListOfList
 
-    let cache = Map.empty |> Map.add id [| arg0; arg1 |]
+    let cache = Map.empty |> Map.add id (LossFunctions.CCEWithLogitsLoss.Definition.Functions.F arg0 arg1)
     let inG = 1.5 |> TensorR0
 
     let dArg0, dArg1 = LossFunctions.CCEWithLogitsLoss.Definition.Functions.B cache id inG
 
-    let gradient =  [ [ -1.12247410;  0.37248275 ]
-                      [  0.37570956; -1.12571651 ]
-                      [  0.37380558; -1.12381010 ]
-                      [ -1.12704104;  0.37704386 ] ]
-
     dArg0 |> shouldBeEquivalentTo [ [ 1.5 ] ]
-    dArg1 |> shouldBeEquivalentTo gradient
     (arg1 - dArg1) |> shouldBeEquivalentTo [ [  1.14946339; 0.60052795 ]
                                              [ -0.35354301; 2.10354996 ]
                                              [ -0.35671960; 2.10672412 ]
@@ -80,14 +76,15 @@ module MSELoss =
 
     let it = LossFunctions.MSELoss.Definition.Functions.F arg0 arg1
 
-    it |> shouldBeEquivalentTo [ [ 4.5 ] ]
+    it.[0] |> shouldBeEquivalentTo [ [ 4.5 ] ]
+    it |> Array.tail |> shouldBeEquivalentToT2 [| arg0; arg1 |]
 
   [<Fact>]
   let ``backPropagate - simple``() =
     let id = "node"
     let arg0 = [ [ 1.; 2.; 3. ] ] |> Tensor.ofListOfList
     let arg1 = [ [ 4.; 5.; 6. ] ] |> Tensor.ofListOfList
-    let cache = Map.empty |> Map.add id [| arg0; arg1 |]
+    let cache = Map.empty |> Map.add id (LossFunctions.MSELoss.Definition.Functions.F arg0 arg1)
     let inGArray = [ [ 2.; 2.; 2. ] ]
     let inG = inGArray |> Tensor.ofListOfList
 

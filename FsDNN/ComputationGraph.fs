@@ -3,9 +3,12 @@
 [<AutoOpen>]
 module ComputationGraphDomain =
 
-  type Cache<'a> = Map<string, 'a[]>
+  /// Convention is [| result; arg0; arg1; ... |]
+  type CacheValue<'a> = 'a[]
 
-  type Op1Forward<'a> = 'a -> 'a
+  type Cache<'a> = Map<string, CacheValue<'a>>
+
+  type Op1Forward<'a> = 'a -> CacheValue<'a>
 
   type Op1BackPropagate<'a> = Cache<'a> -> string -> 'a -> 'a
 
@@ -13,7 +16,7 @@ module ComputationGraphDomain =
     { F: Op1Forward<'a>
       B: Op1BackPropagate<'a> }
 
-  type Op2Forward<'a> = 'a -> 'a -> 'a
+  type Op2Forward<'a> = 'a -> 'a -> CacheValue<'a>
 
   type Op2BackPropagate<'a> = Cache<'a> -> string -> 'a -> 'a * 'a
 
@@ -21,10 +24,18 @@ module ComputationGraphDomain =
     { F: Op2Forward<'a>
       B: Op2BackPropagate<'a> }
 
+  type Operation1Definition<'a> =
+    { Name: string
+      Functions: Op1Functions<'a> }
+
+  type Operation2Definition<'a> =
+    { Name: string
+      Functions: Op2Functions<'a> }
+
   type ComputationGraph<'TData> =
     | Arg of {| Id: string; TrackGradient: bool |}
-    | Op1 of {| Id: string; Functions: Op1Functions<'TData>; Arg: ComputationGraph<'TData>; |}
-    | Op2 of {| Id: string; Functions: Op2Functions<'TData>; Arg0: ComputationGraph<'TData>; Arg1: ComputationGraph<'TData> |}
+    | Op1 of {| D: Operation1Definition<'TData>; Arg: ComputationGraph<'TData>; |}
+    | Op2 of {| D: Operation2Definition<'TData>; Arg0: ComputationGraph<'TData>; Arg1: ComputationGraph<'TData> |}
 
 module ComputationGraph =
   let rec cata fArg fOp1 fOp2 (g: ComputationGraph<'TData>): 'State =
@@ -32,18 +43,18 @@ module ComputationGraph =
 
     match g with
     | Arg a -> fArg a.Id a.TrackGradient
-    | Op1 o -> fOp1 o.Id o.Functions (recurse o.Arg)
-    | Op2 o -> fOp2 o.Id o.Functions (recurse o.Arg0) (recurse o.Arg1)
+    | Op1 o -> fOp1 o.D (recurse o.Arg)
+    | Op2 o -> fOp2 o.D (recurse o.Arg0) (recurse o.Arg1)
 
   let fold fArg fOp1 fOp2 (acc: 'State) (g: ComputationGraph<'TData>): 'State =
     let rec loop t cont =
       match t with
       | Arg a -> cont (fArg a.Id acc)
       | Op1 o -> loop o.Arg (fun acc ->
-                              cont (fOp1 o.Id acc))
+                              cont (fOp1 o.D.Name acc))
       | Op2 o -> loop o.Arg0 (fun acc0 ->
                               loop o.Arg1 (fun acc1 ->
-                              cont (fOp2 o.Id acc0 acc1)))
+                              cont (fOp2 o.D.Name acc0 acc1)))
 
     loop g id
 
@@ -51,11 +62,11 @@ module ComputationGraph =
     let fArg id tg =
       sprintf "%s[TG=%b]" id tg
 
-    let fOp1 id _ acc =
-      sprintf "%s( %s )" id acc
+    let fOp1 (d: Operation1Definition<_>) acc =
+      sprintf "%s( %s )" d.Name acc
 
-    let fOp2 id _ lAcc rAcc =
-      sprintf "%s( %s, %s )" id lAcc rAcc
+    let fOp2 (d: Operation2Definition<_>) lAcc rAcc =
+      sprintf "%s( %s, %s )" d.Name lAcc rAcc
 
     cata fArg fOp1 fOp2 g
 
@@ -64,29 +75,29 @@ module ComputationGraph =
       let ret = fArg id
       ret, []
 
-    let fOp1' id (f: Op1Functions<_>) (arg, m) =
-      let ret = f.F arg
-      let m = (id, [| arg |]) :: m
-      ret, m
+    let fOp1' (d: Operation1Definition<_>) (arg, m) =
+      let cv = d.Functions.F arg
+      let m = (d.Name, cv) :: m
+      cv.[0], m
 
-    let fOp2' id (f: Op2Functions<_>) (arg0, m0) (arg1, m1) =
-      let ret = f.F arg0 arg1
+    let fOp2' (d: Operation2Definition<_>) (arg0, m0) (arg1, m1) =
+      let cv = d.Functions.F arg0 arg1
       let m = m0 @ m1
-      let m = (id, [| arg0; arg1 |]) :: m
-      ret, m
+      let m = (d.Name, cv) :: m
+      cv.[0], m
 
     let J, cache = cata fArg' fOp1' fOp2' g
-    J, cache |> Map.ofList
+    J, (cache |> Map.ofList)
 
   let predict fArg (g: ComputationGraph<'TData>) =
     let fArg' id _ =
       fArg id
 
-    let fOp1' _ (f: Op1Functions<_>)  arg =
-      f.F arg
+    let fOp1' (d: Operation1Definition<_>) arg =
+      d.Functions.F arg |> Array.head
 
-    let fOp2' _ (f: Op2Functions<_>)  arg0 arg1 =
-      f.F arg0 arg1
+    let fOp2' (d: Operation2Definition<_>) arg0 arg1 =
+      d.Functions.F arg0 arg1 |> Array.head
 
     cata fArg' fOp1' fOp2' g
 
@@ -97,10 +108,10 @@ module ComputationGraph =
     | Arg a ->
       if a.TrackGradient then Map.empty |> Map.add a.Id grad0 else Map.empty
     | Op1 o ->
-      let outG = (fOp1 o.Functions.B) o.Id grad0
+      let outG = (fOp1 o.D.Functions.B) o.D.Name grad0
       recurse outG o.Arg
     | Op2 o ->
-      let (outG0, outG1) = (fOp2 o.Functions.B) o.Id grad0
+      let (outG0, outG1) = (fOp2 o.D.Functions.B) o.D.Name grad0
       let rGradients = recurse outG0 o.Arg0
       let lGradients = recurse outG1 o.Arg1
       rGradients |> Map.fold (fun acc key value -> Map.add key value acc) lGradients

@@ -25,5 +25,29 @@ module TestHelpers =
 
     a'.Should().BeEquivalentTo(array2D a, doubleComparisonOptions, String.Empty, Array.empty) |> ignore
 
+  let shouldBeEquivalentToT (m2: Tensor<double>) (m1: Tensor<double>) =
+    let a1, a2 =
+      match m1, m2 with
+      | TensorR2 m1, TensorR2 m2 -> m1.ToArray(), m2.ToArray()
+      | TensorR1 v1, TensorR1 v2 -> array2D [| v1.ToArray() |], array2D [| v2.ToArray() |]
+      | TensorR0 s1, TensorR0 s2 -> array2D [| [| s1 |] |], array2D [| [| s2 |] |]
+      | _, _ -> Prelude.undefined
+
+    a1.Should().BeEquivalentTo(a2, doubleComparisonOptions, String.Empty, Array.empty) |> ignore
+
+  let shouldBeEquivalentToT2 (m2s: Tensor<double>[]) (m1s: Tensor<double>[]) =
+    let _f i m1 m2 =
+      let a1, a2 =
+        match m1, m2 with
+        | TensorR2 m1, TensorR2 m2 -> m1.ToArray(), m2.ToArray()
+        | TensorR1 v1, TensorR1 v2 -> array2D [| v1.ToArray() |], array2D [| v2.ToArray() |]
+        | TensorR0 s1, TensorR0 s2 -> array2D [| [| s1 |] |], array2D [| [| s2 |] |]
+        | _, _ -> Prelude.undefined
+
+      a1.Should().BeEquivalentTo(a2, doubleComparisonOptions, "Tensors at index {0} are not equal", [| i |]) |> ignore
+
+    Array.iteri2 _f m2s m1s
+
+
   let shouldBeApproximately (a1: double) (a2) =
     a1.Should().BeApproximately(a2, precision, String.Empty, Array.empty) |> ignore

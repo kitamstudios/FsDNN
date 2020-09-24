@@ -10,13 +10,14 @@ module Sigmoid =
 
     let it = Activations.Sigmoid.Definition.Functions.F arg
 
-    it |> shouldBeEquivalentTo [ [ 0.73105858; 0.88079708] ]
+    it.[0] |> shouldBeEquivalentTo [ [ 0.73105858; 0.88079708] ]
+    it |> Array.tail |> shouldBeEquivalentToT2 [| arg |]
 
   [<Fact>]
   let ``backPropagate - simple``() =
     let id = "node"
     let arg = [ [ 1.; 2. ] ] |> Tensor.ofListOfList
-    let cache = Map.empty |> Map.add id [| arg |]
+    let cache = Map.empty |> Map.add id (Activations.Sigmoid.Definition.Functions.F arg)
     let inG = [ [ 2.; 2. ] ] |> Tensor.ofListOfList
 
     let it = Activations.Sigmoid.Definition.Functions.B cache id inG
@@ -31,8 +32,9 @@ module SoftMax =
 
     let it = Activations.SoftMax.Definition.Functions.F arg
 
-    it |> shouldBeEquivalentTo [ [ 0.88079707; 0.26894142 ]
-                                 [ 0.11920292; 0.73105857 ] ]
+    it.[0] |> shouldBeEquivalentTo [ [ 0.88079707; 0.26894142 ]
+                                     [ 0.11920292; 0.73105857 ] ]
+    it |> Array.tail |> shouldBeEquivalentToT2 [| arg |]
 
 module HardMax =
   [<Fact>]
@@ -42,5 +44,6 @@ module HardMax =
 
     let it = Activations.HardMax.Definition.Functions.F arg
 
-    it |> shouldBeEquivalentTo [ [ 1.; 0. ]
-                                 [ 0.; 1. ] ]
+    it.[0] |> shouldBeEquivalentTo [ [ 1.; 0. ]
+                                     [ 0.; 1. ] ]
+    it |> Array.tail |> shouldBeEquivalentToT2 [| arg |]

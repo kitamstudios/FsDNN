@@ -79,12 +79,9 @@ TBD - compare with numpy
 
 ## Near term backlog
 
-v Binomial LR
-v Put functions in the nodes directly
-x Multinomial LR
+
 
 o Feature complete
-  v Regression
   - Multiclass classification => https://sebastianraschka.com/faq/docs/pytorch-crossentropy.html
   - Multilabel multiclass classification => https://github.com/rasbt/stat479-deep-learning-ss19/blob/master/L08_logistic/L08_logistic_slides.pdf
   - use scikit learn to generate datasets
@@ -97,6 +94,7 @@ o Feature complete
     - in CCE backprop save value for softmax
   - optimize matrix operations in tensor layer
   - Remove Tensor R0: lr should not be a tensor
+  - Pull optimization out of trainer
 
 - To understand
   - logit, softmax, sigmoid, BCE, stable BCE, multinomial, binomial

@@ -99,22 +99,19 @@ module Net =
 
   let private _createComputationGraphForHiddenLayer prevLayerCG a id: ComputationGraph =
     let linear =
-       Op2 {| Id = sprintf "%s%d" Operations.Add.Definition.Name id
-              Functions = Operations.Add.Definition.Functions
+       Op2 {| D = { Operations.Add.Definition with Name = sprintf "%s%d" Operations.Add.Definition.Name id }
               Arg0 =
-                Op2 {| Id = sprintf "%s%d" Operations.Multiply.Definition.Name id
-                       Functions = Operations.Multiply.Definition.Functions
+                Op2 {| D = { Operations.Multiply.Definition with Name = sprintf "%s%d" Operations.Multiply.Definition.Name id }
                        Arg0 = Arg {| Id = sprintf "W%d" id; TrackGradient = true |}
                        Arg1 = prevLayerCG |}
               Arg1 = Arg {| Id = sprintf "b%d" id; TrackGradient = true |} |}
 
-    let def =
+    let d =
       match a with
       | Linear -> Activations.Linear.Definition
       | Sigmoid -> Activations.Sigmoid.Definition
 
-    Op1 {| Id = def.Name
-           Functions = def.Functions
+    Op1 {| D = d
            Arg = linear |}
 
   let _makeImplicitHiddenLayerForLossLayer g lossLayer =
@@ -124,8 +121,7 @@ module Net =
       | CCEWithLogitsLossLayer _ -> Activations.Linear.Definition
       | MSELossLayer -> Activations.Linear.Definition
 
-    Op1 {| Id = d.Name
-           Functions = d.Functions
+    Op1 {| D = d
            Arg = g |}
 
   let private _createCommonComputationGraph (hiddenLayers: HiddenLayer list) (lossLayer: LossLayer): ComputationGraph =
@@ -136,11 +132,9 @@ module Net =
       |> List.fold (fun (g, id) l -> _createComputationGraphForHiddenLayer g l.Activation id, id + 1) (g0, 1)
 
     let il =
-       Op2 {| Id = sprintf "%s%d" Operations.Add.Definition.Name id
-              Functions = Operations.Add.Definition.Functions
+       Op2 {| D = { Operations.Add.Definition with Name = sprintf "%s%d" Operations.Add.Definition.Name id }
               Arg0 =
-                Op2 {| Id = sprintf "%s%d" Operations.Multiply.Definition.Name id
-                       Functions = Operations.Multiply.Definition.Functions
+                Op2 {| D = {  Operations.Multiply.Definition with Name = sprintf "%s%d" Operations.Multiply.Definition.Name id }
                        Arg0 = Arg {| Id = sprintf "W%d" id; TrackGradient = true |}
                        Arg1 = hg |}
               Arg1 = Arg {| Id = sprintf "b%d" id; TrackGradient = true |} |}
@@ -148,31 +142,29 @@ module Net =
     _makeImplicitHiddenLayerForLossLayer il lossLayer
 
   let private _makePredictGraph lossLayer g =
-    let id, fns =
+    let d =
       match lossLayer with
       | BCEWithLogitsLossLayer ->
-        sprintf "%s[Predict,%d]" Activations.Linear.Definition.Name 1, Activations.Linear.Definition.Functions
+        { Activations.Linear.Definition with Name = sprintf "%s[Predict,%d]" Activations.Linear.Definition.Name 1 }
       | CCEWithLogitsLossLayer l ->
-        sprintf "%s[Predict,%d]" Activations.HardMax.Definition.Name l.Classes, Activations.HardMax.Definition.Functions
+        { Activations.HardMax.Definition with Name = sprintf "%s[Predict,%d]" Activations.HardMax.Definition.Name l.Classes }
       | MSELossLayer ->
-        sprintf "%s[Predict,%d]" Activations.Linear.Definition.Name 1, Activations.Linear.Definition.Functions
+        { Activations.Linear.Definition with Name = sprintf "%s[Predict,%d]" Activations.Linear.Definition.Name 1 }
 
-    Op1 {| Id = id
-           Functions = fns
+    Op1 {| D = d
            Arg = g |}
 
   let private _makeLossGraph lossLayer g =
-    let id, fns =
+    let d =
       match lossLayer with
       | BCEWithLogitsLossLayer ->
-        sprintf "%s[Loss,%d]" LossFunctions.BCEWithLogitsLoss.Definition.Name 1, LossFunctions.BCEWithLogitsLoss.Definition.Functions
+        { LossFunctions.BCEWithLogitsLoss.Definition with Name = sprintf "%s[Loss,%d]" LossFunctions.BCEWithLogitsLoss.Definition.Name 1 }
       | CCEWithLogitsLossLayer l ->
-        sprintf "%s[Loss,%d]" LossFunctions.CCEWithLogitsLoss.Definition.Name l.Classes, LossFunctions.CCEWithLogitsLoss.Definition.Functions
+        { LossFunctions.CCEWithLogitsLoss.Definition with Name = sprintf "%s[Loss,%d]" LossFunctions.CCEWithLogitsLoss.Definition.Name l.Classes }
       | MSELossLayer ->
-        sprintf "%s[Loss,%d]" LossFunctions.MSELoss.Definition.Name 1, LossFunctions.MSELoss.Definition.Functions
+        { LossFunctions.MSELoss.Definition with Name = sprintf "%s[Loss,%d]" LossFunctions.MSELoss.Definition.Name 1 }
 
-    Op2 {| Id = id
-           Functions = fns
+    Op2 {| D = d
            Arg0 = Arg {| Id = "Y"; TrackGradient = false |}
            Arg1 = g |}
 
