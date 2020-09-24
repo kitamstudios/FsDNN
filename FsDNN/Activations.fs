@@ -8,8 +8,7 @@ module Activations =
       [| it; arg |]
 
     let private _backPropagate (cache: Cache<Tensor<double>>) id (inG: Tensor<double>) =
-      let arg = cache.[id].[1]
-      let s = arg.Negate().PointwiseExp().Add(1.0).PointwisePower(-1.0)
+      let s = cache.[id].[0]
       inG.PointwiseMultiply(s.PointwiseMultiply(s.Negate().Add(1.0)))
 
     let Definition: Operation1Definition<_> =

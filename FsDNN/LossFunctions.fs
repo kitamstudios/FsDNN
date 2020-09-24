@@ -29,14 +29,12 @@ module LossFunctions =
     let private _forwardPropagate (Y: Tensor<double>) (Ŷ: Tensor<double>)=
       let softMax = Activations.SoftMax.Definition.Functions.F Ŷ |> Array.head
       let it = (Y.Negate().PointwiseMultiply(softMax.PointwiseLog())).Sum() |> TensorR0
-      [| it; Y; Ŷ |]
+      [| it; Y; Ŷ; softMax |]
 
     let private _backPropagate (cache: Cache<Tensor<double>>) id (inG: Tensor<double>) =
       let g0 = inG
       let Y = cache.[id].[1]
-      let Ŷ = cache.[id].[2]
-      // TODO: Get this from the cache
-      let softMax = Activations.SoftMax.Definition.Functions.F Ŷ |> Array.head
+      let softMax = cache.[id].[3]
       let g1 = softMax - Y
       (g0, inG.PointwiseMultiply(g1))
 

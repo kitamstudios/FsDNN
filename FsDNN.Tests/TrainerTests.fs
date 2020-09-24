@@ -5,9 +5,6 @@ open Xunit
 open System.Collections.Generic
 
 (*
-- Use cached value
-  - in sigmoid backPropagate
-  - in CCE backprop save value for softmax
 - collapse sigmoid/bce and remove id layer
 - Remove Tensor R0: lr should not be a tensor
 

@@ -43,7 +43,7 @@ module CCEWithLogitsLoss =
     let it = LossFunctions.CCEWithLogitsLoss.Definition.Functions.F arg0 arg1
 
     it.[0] |> shouldBeEquivalentTo [ [ 6.23951519 ] ]
-    it |> Array.tail |> shouldBeEquivalentToT2 [| arg0; arg1 |]
+    it |> Array.skip 1 |> Array.take 2 |> shouldBeEquivalentToT2 [| arg0; arg1 |]
 
   [<Fact>]
   let ``backPropagate - simple``() =
