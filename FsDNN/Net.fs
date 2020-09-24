@@ -43,6 +43,7 @@ module NetDomain =
   type Activation =
     | Linear
     | Sigmoid
+    | ReLU
 
   type HiddenLayer =
     | FullyConnectedLayer of {| N: int; Activation: Activation |}
@@ -110,11 +111,12 @@ module Net =
       match a with
       | Linear -> Activations.Linear.Definition
       | Sigmoid -> Activations.Sigmoid.Definition
+      | ReLU -> Activations.ReLU.Definition
 
     Op1 {| D = d
            Arg = linear |}
 
-  let private _createCommonComputationGraph (hiddenLayers: HiddenLayer list) (lossLayer: LossLayer): ComputationGraph =
+  let private _createCommonComputationGraph (hiddenLayers: HiddenLayer list): ComputationGraph =
     let g0 = Arg {| Id = "X"; TrackGradient = false |}
 
     let hg, id =
@@ -159,7 +161,7 @@ module Net =
            Arg1 = g |}
 
   let makeLayers seed heScale (inputLayer: InputLayer) (hiddenLayers: HiddenLayer list) (lossLayer: LossLayer): Net =
-    let cg = _createCommonComputationGraph hiddenLayers lossLayer
+    let cg = _createCommonComputationGraph hiddenLayers
 
     let pg = _makePredictGraph lossLayer cg
     let lg = _makeLossGraph lossLayer cg

@@ -39,3 +39,16 @@ module Activations =
     let Definition: Operation1Definition<_> =
       { Name = "HardMax"
         Functions = { F = _forwardPropagate; B = fun _ _ -> Prelude.undefined } }
+
+  module ReLU =
+    let private _forwardPropagate (arg: Tensor<double>) =
+      let it = arg.PointwiseMaximum(0.0)
+      [| it; arg |]
+
+    let private _backPropagate (cache: Cache<Tensor<double>>) id (inG: Tensor<double>) =
+      let arg = cache.[id].[1]
+      inG.PointwiseMultiply(arg.PointwiseSign().PointwiseMaximum(0.0))
+
+    let Definition: Operation1Definition<_> =
+      { Name = "ReLU"
+        Functions = { F = _forwardPropagate; B = _backPropagate } }

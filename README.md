@@ -30,7 +30,7 @@
 
 - [x] Linear
 - [x] Sigmoid
-- [ ] ReLU
+- [x] ReLU
 - [ ] TanH
 
 ### Cost Functions

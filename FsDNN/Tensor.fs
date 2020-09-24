@@ -134,6 +134,18 @@ type Tensor =
     | _ -> Prelude.undefined
 
   [<Extension>]
+  static member inline PointwiseMaximum((t: Tensor<'TData>), (other: 'TData)): Tensor<'TData> =
+    match t with
+    | TensorR2 m -> m.PointwiseMaximum(other) |> TensorR2
+    | _ -> Prelude.undefined
+
+  [<Extension>]
+  static member inline PointwiseSign(t: Tensor<'TData>): Tensor<'TData> =
+    match t with
+    | TensorR2 m -> m.PointwiseSign() |> TensorR2
+    | _ -> Prelude.undefined
+
+  [<Extension>]
   static member inline Sum(t: Tensor<'TData>): 'TData =
     match t with
     | TensorR2 m -> m.ColumnSums().Sum()

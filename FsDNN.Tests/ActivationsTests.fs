@@ -47,3 +47,24 @@ module HardMax =
     it.[0] |> shouldBeEquivalentTo [ [ 1.; 0. ]
                                      [ 0.; 1. ] ]
     it |> Array.tail |> shouldBeEquivalentToT2 [| arg |]
+
+module ReLU =
+  [<Fact>]
+  let ``forwardPropagate - simple``() =
+    let arg = [ [ -1.; 2. ] ] |> Tensor.ofListOfList
+
+    let it = Activations.ReLU.Definition.Functions.F arg
+
+    it.[0] |> shouldBeEquivalentTo [ [ 0.; 2. ] ]
+    it |> Array.tail |> shouldBeEquivalentToT2 [| arg |]
+
+  [<Fact>]
+  let ``backPropagate - simple``() =
+    let id = "node"
+    let arg = [ [ -1.; 2. ] ] |> Tensor.ofListOfList
+    let cache = Map.empty |> Map.add id (Activations.ReLU.Definition.Functions.F arg)
+    let inG = [ [ 2.; 2. ] ] |> Tensor.ofListOfList
+
+    let it = Activations.ReLU.Definition.Functions.B cache id inG
+
+    it |> shouldBeEquivalentTo [ [ 0.; 2. ] ]
