@@ -12,6 +12,8 @@
         <Compile Include="ComputationGraph.fs" />
         <Compile Include="Tensor.fs" />
         <Compile Include="Operations.fs" />
+        <Compile Include="Activations.fs" />
+        <Compile Include="LossFunctions.fs" />
         <Compile Include="Net.fs" />
         <Compile Include="Trainer.fs" />
     </ItemGroup>

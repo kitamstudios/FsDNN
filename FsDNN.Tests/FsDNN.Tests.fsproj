@@ -13,6 +13,8 @@
         <Compile Include="TestHelpers.fs" />
         <Compile Include="ComputationGraphTests.fs" />
         <Compile Include="OperationsTests.fs" />
+        <Compile Include="ActivationsTests.fs" />
+        <Compile Include="LossFunctionsTests.fs" />
         <Compile Include="NetTests.fs" />
         <Compile Include="TrainerTests.fs" />
         <Compile Include="Program.fs" />

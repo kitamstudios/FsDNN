@@ -14,6 +14,7 @@ x remove redundant test
 - collapse sigmoid/bce and remove id layer
 - Remove Tensor R0: lr should not be a tensor
 - move to definitions in computation graph, make functions private
+
 *)
 
 [<Fact>]

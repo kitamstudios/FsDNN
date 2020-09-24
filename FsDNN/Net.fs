@@ -110,8 +110,8 @@ module Net =
 
     let def =
       match a with
-      | Linear -> Operations.Linear.Definition
-      | Sigmoid -> Operations.Sigmoid.Definition
+      | Linear -> Activations.Linear.Definition
+      | Sigmoid -> Activations.Sigmoid.Definition
 
     Op1 {| Id = def.Name
            Functions = def.Functions
@@ -120,9 +120,9 @@ module Net =
   let _makeImplicitHiddenLayerForLossLayer g lossLayer =
     let d =
       match lossLayer with
-      | BCEWithLogitsLossLayer -> Operations.Sigmoid.Definition
-      | CCEWithLogitsLossLayer _ -> Operations.Linear.Definition
-      | MSELossLayer -> Operations.Linear.Definition
+      | BCEWithLogitsLossLayer -> Activations.Sigmoid.Definition
+      | CCEWithLogitsLossLayer _ -> Activations.Linear.Definition
+      | MSELossLayer -> Activations.Linear.Definition
 
     Op1 {| Id = d.Name
            Functions = d.Functions
@@ -151,11 +151,11 @@ module Net =
     let id, fns =
       match lossLayer with
       | BCEWithLogitsLossLayer ->
-        sprintf "%s[Predict,%d]" Operations.Linear.Definition.Name 1, Operations.Linear.Definition.Functions
+        sprintf "%s[Predict,%d]" Activations.Linear.Definition.Name 1, Activations.Linear.Definition.Functions
       | CCEWithLogitsLossLayer l ->
-        sprintf "%s[Predict,%d]" Operations.HardMax.Definition.Name l.Classes, Operations.HardMax.Definition.Functions
+        sprintf "%s[Predict,%d]" Activations.HardMax.Definition.Name l.Classes, Activations.HardMax.Definition.Functions
       | MSELossLayer ->
-        sprintf "%s[Predict,%d]" Operations.Linear.Definition.Name 1, Operations.Linear.Definition.Functions
+        sprintf "%s[Predict,%d]" Activations.Linear.Definition.Name 1, Activations.Linear.Definition.Functions
 
     Op1 {| Id = id
            Functions = fns
@@ -165,11 +165,11 @@ module Net =
     let id, fns =
       match lossLayer with
       | BCEWithLogitsLossLayer ->
-        sprintf "%s[Loss,%d]" Operations.BCEWithLogitsLoss.Definition.Name 1, Operations.BCEWithLogitsLoss.Definition.Functions
+        sprintf "%s[Loss,%d]" LossFunctions.BCEWithLogitsLoss.Definition.Name 1, LossFunctions.BCEWithLogitsLoss.Definition.Functions
       | CCEWithLogitsLossLayer l ->
-        sprintf "%s[Loss,%d]" Operations.CCEWithLogitsLoss.Definition.Name l.Classes, Operations.CCEWithLogitsLoss.Definition.Functions
+        sprintf "%s[Loss,%d]" LossFunctions.CCEWithLogitsLoss.Definition.Name l.Classes, LossFunctions.CCEWithLogitsLoss.Definition.Functions
       | MSELossLayer ->
-        sprintf "%s[Loss,%d]" Operations.MSELoss.Definition.Name 1, Operations.MSELoss.Definition.Functions
+        sprintf "%s[Loss,%d]" LossFunctions.MSELoss.Definition.Name 1, LossFunctions.MSELoss.Definition.Functions
 
     Op2 {| Id = id
            Functions = fns
