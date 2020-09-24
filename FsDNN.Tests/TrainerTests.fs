@@ -4,14 +4,9 @@ open KS.FsDNN
 open Xunit
 open System.Collections.Generic
 
-(*
-- Remove Tensor R0: lr should not be a tensor
-
-*)
-
 [<Fact>]
 let ``trainWithGD - single perceptron - logistic regression`` () =
-  let n = Net.makeLayers 1 1.0 { N = 2 } [] BCEWithLogitsLossLayer
+  let n = Net.makeLayers 1 1.0 { N = 2 } [] (BCEWithLogitsLossLayer {| Classes = 1 |})
 
   // OR function - refer https://repl.it/@parthopdas/logisticregression
   let X = [ [ 0.; 1.; 0.; 1. ]
@@ -51,7 +46,7 @@ let ``trainWithGD - single perceptron - linear regression`` () =
   n.Parameters.["b1"] |> shouldBeEquivalentTo [ [ 4.08554567 ] ]
 
 [<Fact>]
-let ``trainWithGD - multilayer perceptron - multilabel classification`` () =
+let ``trainWithGD - multilayer perceptron - multi-class classification`` () =
   let n = Net.makeLayers 1 1.0 { N = 2 } [ FullyConnectedLayer {| N = 4; Activation = Sigmoid |} ] (CCEWithLogitsLossLayer {| Classes = 2 |})
 
   // XOR function
@@ -79,7 +74,3 @@ let ``trainWithGD - multilayer perceptron - multilabel classification`` () =
   n.Parameters.["W2"] |> shouldBeEquivalentTo [ [-5.51024054;  2.34664527;  1.92806650; -5.90201381 ]
                                                 [ 6.15139511; -3.04675126; -1.13124710;  5.73219486 ] ]
   n.Parameters.["b2"] |> shouldBeEquivalentTo [ [ 2.54121819; -2.54121819 ] ]
-
-  let Y' = X |> Net.predict n
-
-  Y' |> shouldBeEquivalentTo Y

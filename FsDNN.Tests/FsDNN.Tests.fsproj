@@ -17,6 +17,7 @@
         <Compile Include="LossFunctionsTests.fs" />
         <Compile Include="NetTests.fs" />
         <Compile Include="TrainerTests.fs" />
+        <Compile Include="E2ETests.fs" />
         <Compile Include="Program.fs" />
     </ItemGroup>
 

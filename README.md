@@ -79,19 +79,7 @@ TBD - compare with numpy
 
 ## Near term backlog
 
-
-
-o Feature complete
-  - Multiclass classification => https://sebastianraschka.com/faq/docs/pytorch-crossentropy.html
-  - Multilabel multiclass classification => https://github.com/rasbt/stat479-deep-learning-ss19/blob/master/L08_logistic/L08_logistic_slides.pdf
-  - use scikit learn to generate datasets
-
 - Refactoring
-  - Align layer definitions with keras (machinelearnignmastery)
-    - collapse softmax_logistic & sigmoid_logistic? (https://machinelearningmastery.com/how-to-choose-loss-functions-when-training-deep-learning-neural-networks/)
-  - Use cached value 
-    - in sigmoid backPropagate
-    - in CCE backprop save value for softmax
   - optimize matrix operations in tensor layer
   - Remove Tensor R0: lr should not be a tensor
   - Pull optimization out of trainer

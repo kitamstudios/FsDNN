@@ -58,13 +58,13 @@ module NetDomain =
   /// Following has the exhaustive list
   /// https://machinelearningmastery.com/how-to-choose-loss-functions-when-training-deep-learning-neural-networks/
   type LossLayer =
-    | BCEWithLogitsLossLayer
+    | BCEWithLogitsLossLayer of {| Classes: int  |}
     | CCEWithLogitsLossLayer of {| Classes: int  |}
     | MSELossLayer
 
     member this.Classes =
       match this with
-      | BCEWithLogitsLossLayer -> 1
+      | BCEWithLogitsLossLayer l -> l.Classes
       | CCEWithLogitsLossLayer l -> l.Classes
       | MSELossLayer -> 1
 
@@ -134,8 +134,8 @@ module Net =
   let private _makePredictGraph lossLayer g =
     let d =
       match lossLayer with
-      | BCEWithLogitsLossLayer ->
-        { Activations.Sigmoid.Definition with Name = sprintf "%s[Predict,%d]" Activations.Sigmoid.Definition.Name 1 }
+      | BCEWithLogitsLossLayer l ->
+        { Activations.Sigmoid.Definition with Name = sprintf "%s[Predict,%d]" Activations.Sigmoid.Definition.Name l.Classes }
       | CCEWithLogitsLossLayer l ->
         { Activations.HardMax.Definition with Name = sprintf "%s[Predict,%d]" Activations.HardMax.Definition.Name l.Classes }
       | MSELossLayer ->
@@ -147,8 +147,8 @@ module Net =
   let private _makeLossGraph lossLayer g =
     let d =
       match lossLayer with
-      | BCEWithLogitsLossLayer ->
-        { LossFunctions.BCEWithLogitsLoss.Definition with Name = sprintf "%s[Loss,%d]" LossFunctions.BCEWithLogitsLoss.Definition.Name 1 }
+      | BCEWithLogitsLossLayer l ->
+        { LossFunctions.BCEWithLogitsLoss.Definition with Name = sprintf "%s[Loss,%d]" LossFunctions.BCEWithLogitsLoss.Definition.Name l.Classes }
       | CCEWithLogitsLossLayer l ->
         { LossFunctions.CCEWithLogitsLoss.Definition with Name = sprintf "%s[Loss,%d]" LossFunctions.CCEWithLogitsLoss.Definition.Name l.Classes }
       | MSELossLayer ->

@@ -6,7 +6,7 @@ open FsUnit.Xunit
 
 [<Fact>]
 let ``makeLayer - logistic unit`` () =
-  let n = Net.makeLayers 1 1.0 { N = 2 } [] BCEWithLogitsLossLayer
+  let n = Net.makeLayers 1 1.0 { N = 2 } [] (BCEWithLogitsLossLayer {| Classes = 1 |})
 
   let it = n |> Net.toString
   it.LossGraphString |> should equal "BCEWithLogitsLoss[Loss,1]( Y[TG=false], Add1( Multiply1( W1[TG=true], X[TG=false] ), b1[TG=true] ) )"
@@ -33,7 +33,7 @@ let ``makeLayer - multilayer perceptron`` () =
 
 [<Fact>]
 let ``predict - single perceptron - logistic regression`` () =
-  let n = Net.makeLayers 1 1.0 { N = 2 } [] BCEWithLogitsLossLayer
+  let n = Net.makeLayers 1 1.0 { N = 2 } [] (BCEWithLogitsLossLayer {| Classes = 1 |})
   let parameters =
     Map.empty
     |> Map.add "W1" ([ [  6.17291401; 6.17174639 ] ] |> Tensor.ofListOfList)
