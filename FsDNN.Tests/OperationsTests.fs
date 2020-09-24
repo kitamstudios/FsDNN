@@ -81,18 +81,18 @@ module BCEWithLogitsLoss =
 module CCEWithLogitsLoss =
   [<Fact>]
   let ``forwardPropagate - simple``() =
-    let arg0 = [ [1.; 0.]
+    let arg0 = [ [0.; 0.]
                  [0.; 1.]
-                 [0.; 1.]
-                 [1.; 0.] ] |> Tensor.ofListOfList
-    let arg1 = [ [  0.6693461;  0.3306539 ]
-                 [  0.6858448;  0.3141552 ]
-                 [  0.67993372; 0.32006628]
-                 [  0.69203662; 0.30796338] ] |> Tensor.ofListOfList
+                 [1.; 0.]
+                 [1.; 1.] ] |> Tensor.ofListOfList
+    let arg1 = [ [ 0.6693461;  -0.3306539  ]
+                 [ 0.6858448;   0.3141552  ]
+                 [-0.67993372;  0.32006628 ]
+                 [ 0.69203662;  0.30796338 ] ] |> Tensor.ofListOfList
 
     let it = CCEWithLogitsLoss.Definition.Functions.F arg0 arg1
 
-    it |> shouldBeEquivalentTo [ [ 3.06666578295317 ] ]
+    it |> shouldBeEquivalentTo [ [ 6.23951519 ] ]
 
   [<Fact>]
   let ``backPropagate - simple``() =
@@ -111,17 +111,17 @@ module CCEWithLogitsLoss =
 
     let dArg0, dArg1 = CCEWithLogitsLoss.backPropagate cache id inG
 
-    let gradient =  [ [ -1.459516065;  1.459516065]
-                      [ 0.033249825;  -0.033249825]
-                      [ 0.02562897;  -0.02562897]
-                      [ -1.47777225;   1.47777225 ] ]
+    let gradient =  [ [ -1.12247410;  0.37248275 ]
+                      [  0.37570956; -1.12571651 ]
+                      [  0.37380558; -1.12381010 ]
+                      [ -1.12704104;  0.37704386 ] ]
 
     dArg0 |> shouldBeEquivalentTo [ [ 1.5 ] ]
     dArg1 |> shouldBeEquivalentTo gradient
-    (arg1 - dArg1) |> shouldBeEquivalentTo [ [ 1.48650535; -0.48650535 ]
-                                             [ -0.01108327; 1.01108327 ]
-                                             [ -0.00854299; 1.00854299 ]
-                                             [ 1.49259075; -0.49259075 ] ]
+    (arg1 - dArg1) |> shouldBeEquivalentTo [ [  1.14946339; 0.60052795 ]
+                                             [ -0.35354301; 2.10354996 ]
+                                             [ -0.35671960; 2.10672412 ]
+                                             [  1.14185954; 0.60813763 ] ]
 
 module MSELoss =
   [<Fact>]
@@ -166,3 +166,14 @@ module Sigmoid =
     let it = Sigmoid.backPropagate cache id inG
 
     it |> shouldBeEquivalentTo [ [ 0.39322387; 0.20998717 ] ]
+
+module HardMax =
+  [<Fact>]
+  let ``forwardPropagate - simple``() =
+    let arg = [ [  1.; -4. ]
+                [ -1.; -3. ] ] |> Tensor.ofListOfList
+
+    let it = HardMax.forwardPropagate arg
+
+    it |> shouldBeEquivalentTo [ [ 1.; 0. ]
+                                 [ 0.; 1. ] ]

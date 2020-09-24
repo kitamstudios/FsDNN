@@ -4,6 +4,18 @@ open KS.FsDNN
 open Xunit
 open System.Collections.Generic
 
+(*
+v multiclass
+v add corresponding tests to net.predict
+x remove redundant test
+- Use cached value
+  - in sigmoid backPropagate
+  - in CCE backprop save value for softmax
+- collapse sigmoid/bce and remove id layer
+- Remove Tensor R0: lr should not be a tensor
+- move to definitions in computation graph, make functions private
+*)
+
 [<Fact>]
 let ``trainWithGD - single perceptron - logistic regression`` () =
   let n = Net.makeLayers 1 1.0 { N = 2 } [] BCEWithLogitsLossLayer
@@ -15,20 +27,15 @@ let ``trainWithGD - single perceptron - logistic regression`` () =
 
   let costs = Dictionary<int, Tensor<double>>()
   let cb = fun e _ J -> if e % 1 = 0 then costs.[e] <- J else ()
-  let hp = { HyperParameters.Defaults with Epochs = 3 }
+  let hp = { HyperParameters.Defaults with Epochs = 300; LearningRate = TensorR0 1.  }
 
   let n = Trainer.trainWithGD cb n X Y hp
 
   costs.[0] |> shouldBeEquivalentTo [ [ 0.911103 ] ]
-  costs.[1] |> shouldBeEquivalentTo [ [ 0.907899 ] ]
-  costs.[2] |> shouldBeEquivalentTo [ [ 0.904718 ] ]
-  n.Parameters.["W1"] |> shouldBeEquivalentTo [ [ -0.28995256; -0.45392965 ] ]
-  n.Parameters.["b1"] |> shouldBeEquivalentTo [ [ 0.010229874835574478 ] ]
-
-  let Y' = X |> Net.predict n
-
-  Y' |> shouldBeEquivalentTo [[0.50255745; 0.43052177; 0.39085974; 0.32439376]]
-
+  costs.[1] |> shouldBeEquivalentTo [ [ 0.649122 ] ]
+  costs.[2] |> shouldBeEquivalentTo [ [ 0.5423996 ] ]
+  n.Parameters.["W1"] |> shouldBeEquivalentTo [ [  6.17291401; 6.17174639 ] ]
+  n.Parameters.["b1"] |> shouldBeEquivalentTo [ [ -2.60293958 ] ]
 
 [<Fact>]
 let ``trainWithGD - single perceptron - linear regression`` () =
@@ -50,10 +57,36 @@ let ``trainWithGD - single perceptron - linear regression`` () =
   n.Parameters.["W1"] |> shouldBeEquivalentTo [ [ 2.83040026 ] ]
   n.Parameters.["b1"] |> shouldBeEquivalentTo [ [ 4.08554567 ] ]
 
+[<Fact>]
+let ``trainWithGD - multilayer perceptron - multilabel classification`` () =
+  let n = Net.makeLayers 1 1.0 { N = 2 } [ FullyConnectedLayer {| N = 4; Activation = Sigmoid |} ] (CCEWithLogitsLossLayer {| Classes = 2 |})
+
+  // XOR function
+  let X = [ [ 0.; 0.; 1.; 1. ]
+            [ 0.; 1.; 0.; 1. ] ] |> Tensor.ofListOfList
+  let Y = [ [ 1.; 0.; 0.; 1. ]
+            [ 0.; 1.; 1.; 0. ] ]
+
+  let costs = Dictionary<int, Tensor<double>>()
+  let cb = fun e _ J -> if e % 1 = 0 then costs.[e] <- J else ()
+  let hp = { HyperParameters.Defaults with Epochs = 300; LearningRate = TensorR0 1. }
+
+  let n = Trainer.trainWithGD cb n X (Y |> Tensor.ofListOfList) hp
+
+  costs.[0] |> shouldBeEquivalentTo [ [ 3.44758157 ] ]
+  costs.[1] |> shouldBeEquivalentTo [ [ 7.44451981 ] ]
+  costs.[2] |> shouldBeEquivalentTo [ [ 8.38356992 ] ]
+  costs.[299] |> shouldBeEquivalentTo [ [ 0.02101631 ] ]
+
+  n.Parameters.["W1"] |> shouldBeEquivalentTo [ [-6.51585396;  4.70861465 ]
+                                                [-3.98960860; -3.58098107 ]
+                                                [-2.78070594; -2.35356575 ]
+                                                [ 4.08154790; -6.17370970 ] ]
+  n.Parameters.["b1"] |> shouldBeEquivalentTo [ [-2.13957179; 0.48206278; -0.65083278; -1.68797631] ]
+  n.Parameters.["W2"] |> shouldBeEquivalentTo [ [-5.51024054;  2.34664527;  1.92806650; -5.90201381 ]
+                                                [ 6.15139511; -3.04675126; -1.13124710;  5.73219486 ] ]
+  n.Parameters.["b2"] |> shouldBeEquivalentTo [ [ 2.54121819; -2.54121819 ] ]
+
   let Y' = X |> Net.predict n
 
-  Y' |> shouldBeEquivalentTo [ [ 6.44622405; 8.16315894; 4.08619312; 5.79699006; 4.9163015; 4.60825604; 5.13992757; 6.04169602; 6.3315672; 7.13567972] ]
-
-[<Fact>]
-let ``trainWithGD - DNN - XOR function`` () =
-  ()
+  Y' |> shouldBeEquivalentTo Y

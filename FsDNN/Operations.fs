@@ -63,13 +63,18 @@ module Operations =
 
   module CCEWithLogitsLoss =
     let forwardPropagate (Y: Tensor<double>) (Ŷ: Tensor<double>): Tensor<double> =
-      (Y.Negate().PointwiseMultiply(Ŷ.PointwiseLog())).Sum() |> TensorR0
+      let exp = Ŷ.PointwiseExp()
+      let softMax = exp / exp.ColumnSums()
+      (Y.Negate().PointwiseMultiply(softMax.PointwiseLog())).Sum() |> TensorR0
 
     let backPropagate (cache: Cache<Tensor<double>>) id (inG: Tensor<double>) =
       let g0 = inG
       let Y = cache.[id].[0]
       let Ŷ = cache.[id].[1]
-      let g1 = Ŷ - Y
+      // TODO: Get this from the cache
+      let exp = Ŷ.PointwiseExp()
+      let softMax = exp / exp.ColumnSums()
+      let g1 = softMax - Y
       (g0, inG.PointwiseMultiply(g1))
 
     let Definition: Operation2Definition<_> =
@@ -109,4 +114,14 @@ module Operations =
         Functions = { F = forwardPropagate; B = backPropagate } }
 
   module Linear =
-    let Functions : Op1Functions<_> = { F = id; B = fun _ _ -> id }
+    let Definition: Operation1Definition<_> =
+      { Name = "Linear"
+        Functions = { F = id; B = fun _ _ -> id } }
+
+  module HardMax =
+    let forwardPropagate (arg: Tensor<double>): Tensor<double> =
+      arg.ColumnHardMax()
+
+    let Definition: Operation1Definition<_> =
+      { Name = "HardMax"
+        Functions = { F = forwardPropagate; B = fun _ _ -> Prelude.undefined } }

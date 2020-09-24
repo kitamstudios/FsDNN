@@ -38,6 +38,9 @@ module TensorDomain =
       | TensorR1 v -> v.Count
       | TensorR0 _ -> 1
 
+    member inline this.Shape =
+      (this.RowCount, this.ColumnCount)
+
     static member inline Add(t0: Tensor<'TData>, t1: Tensor<'TData>): Tensor<'TData> =
       match (t0, t1) with
       | TensorR2 m0, TensorR2 m1 -> (m0 + m1) |> TensorR2
@@ -61,6 +64,7 @@ module TensorDomain =
     static member inline Divide(t0: Tensor<'TData>, t1: Tensor<'TData>): Tensor<'TData> =
       match (t0, t1) with
       | TensorR2 m0, TensorR2 m1 -> m0.PointwiseDivide(m1) |> TensorR2
+      | TensorR2 m0, TensorR1 v1 -> (m0.PointwiseDivide(DenseMatrix.ofRowSeq (Enumerable.Repeat(v1, m0.RowCount)))) |> TensorR2
       | TensorR2 m0, TensorR0 s1 -> m0.Divide(s1) |> TensorR2
       | _ -> Prelude.undefined
 
@@ -108,7 +112,7 @@ type Tensor =
   static member inline PointwiseDivide(t0: Tensor<'TData>, t1: Tensor<'TData>): Tensor<'TData> =
     match t0, t1 with
     | TensorR2 m0, TensorR2 m1 -> m0.PointwiseDivide(m1) |> TensorR2
-    | TensorR2 m0, TensorR0 s1 -> (m0 / s1) |> TensorR2
+    | TensorR2 m0, TensorR0 s1 -> m0.Divide(s1) |> TensorR2
     | _ -> Prelude.undefined
 
   [<Extension>]
@@ -136,6 +140,22 @@ type Tensor =
     | TensorR1 v -> v.Sum()
     | TensorR0 s -> s
 
+  [<Extension>]
+  static member inline ColumnSums(t: Tensor<'TData>): Tensor<'TData> =
+    match t with
+    | TensorR2 m -> m.ColumnSums() |> TensorR1
+    | _ -> Prelude.undefined
+
+  [<Extension>]
+  static member inline ColumnHardMax(t: Tensor<'TData>): Tensor<'TData> =
+    match t with
+    | TensorR2 m ->
+      let mapVector _ v: Vector<'TData> =
+        let imax = Vector.maxIndex v
+        v |> Vector.mapi (fun i _ -> if i = imax then Matrix.One else Matrix.Zero)
+      m |> Matrix.mapCols mapVector |> TensorR2
+    | _ -> Prelude.undefined
+
 module Tensor =
   let createRandomizedR2 seed rows cols scale =
     let t0 = DenseMatrix.random<double> rows cols (Normal.WithMeanVariance(0.0, 1.0, Random(seed))) |> TensorR2
@@ -146,3 +166,5 @@ module Tensor =
     DenseVector.zero<double> n |> TensorR1
 
   let ofListOfList (rs: double list list) = rs |> array2D |> CreateMatrix.DenseOfArray |> TensorR2
+
+  let ofList (rs: double list) = rs |> Array.ofSeq |> CreateVector.DenseOfArray |> TensorR1

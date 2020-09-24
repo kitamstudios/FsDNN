@@ -40,12 +40,20 @@ module NetDomain =
   type InputLayer =
     { N: int }
 
+  type Activation =
+    | Linear
+    | Sigmoid
+
   type HiddenLayer =
-    | FullyConnectedLayer of {| N: int |}
+    | FullyConnectedLayer of {| N: int; Activation: Activation |}
 
     member this.N =
       match this with
       | FullyConnectedLayer l -> l.N
+
+    member this.Activation =
+      match this with
+      | FullyConnectedLayer l -> l.Activation
 
   /// Following has the exhaustive list
   /// https://machinelearningmastery.com/how-to-choose-loss-functions-when-training-deep-learning-neural-networks/
@@ -71,8 +79,9 @@ module NetDomain =
 
 module Net =
 
-  let toString n: string =
-    n.LossGraph |> ComputationGraph.toString
+  let toString n =
+    {| LossGraphString = n.LossGraph |> ComputationGraph.toString
+       PredictGraphString = n.PredictGraph |> ComputationGraph.toString |}
 
   let private _initializeParameters (seed: int) (heScale: double) layerNeurons: Map<string, Tensor<double>> =
     let ws =
@@ -88,55 +97,92 @@ module Net =
     ws @ bs
     |> Map.ofList
 
-  let private _createComputationGraphForOneLayer prevLayerCG id: ComputationGraph =
-     Op2 {| Id = Operations.Add.Definition.Name
-            Functions = Operations.Add.Definition.Functions
-            Arg0 =
-              Op2 {| Id = Operations.Multiply.Definition.Name
-                     Functions = Operations.Multiply.Definition.Functions
-                     Arg0 = Arg {| Id = sprintf "W%d" id; TrackGradient = true |}
-                     Arg1 = prevLayerCG |}
-            Arg1 = Arg {| Id = sprintf "b%d" id; TrackGradient = true |} |}
+  let private _createComputationGraphForHiddenLayer prevLayerCG a id: ComputationGraph =
+    let linear =
+       Op2 {| Id = sprintf "%s%d" Operations.Add.Definition.Name id
+              Functions = Operations.Add.Definition.Functions
+              Arg0 =
+                Op2 {| Id = sprintf "%s%d" Operations.Multiply.Definition.Name id
+                       Functions = Operations.Multiply.Definition.Functions
+                       Arg0 = Arg {| Id = sprintf "W%d" id; TrackGradient = true |}
+                       Arg1 = prevLayerCG |}
+              Arg1 = Arg {| Id = sprintf "b%d" id; TrackGradient = true |} |}
+
+    let def =
+      match a with
+      | Linear -> Operations.Linear.Definition
+      | Sigmoid -> Operations.Sigmoid.Definition
+
+    Op1 {| Id = def.Name
+           Functions = def.Functions
+           Arg = linear |}
 
   let _makeImplicitHiddenLayerForLossLayer g lossLayer =
-    let fns =
+    let d =
       match lossLayer with
-      | BCEWithLogitsLossLayer -> Operations.Sigmoid.Definition.Functions
-      | CCEWithLogitsLossLayer _ -> Operations.Linear.Functions
-      | MSELossLayer -> Operations.Linear.Functions
+      | BCEWithLogitsLossLayer -> Operations.Sigmoid.Definition
+      | CCEWithLogitsLossLayer _ -> Operations.Linear.Definition
+      | MSELossLayer -> Operations.Linear.Definition
 
-    Op1 {| Id = Operations.Sigmoid.Definition.Name
+    Op1 {| Id = d.Name
+           Functions = d.Functions
+           Arg = g |}
+
+  let private _createCommonComputationGraph (hiddenLayers: HiddenLayer list) (lossLayer: LossLayer): ComputationGraph =
+    let g0 = Arg {| Id = "X"; TrackGradient = false |}
+
+    let hg, id =
+      hiddenLayers
+      |> List.fold (fun (g, id) l -> _createComputationGraphForHiddenLayer g l.Activation id, id + 1) (g0, 1)
+
+    let il =
+       Op2 {| Id = sprintf "%s%d" Operations.Add.Definition.Name id
+              Functions = Operations.Add.Definition.Functions
+              Arg0 =
+                Op2 {| Id = sprintf "%s%d" Operations.Multiply.Definition.Name id
+                       Functions = Operations.Multiply.Definition.Functions
+                       Arg0 = Arg {| Id = sprintf "W%d" id; TrackGradient = true |}
+                       Arg1 = hg |}
+              Arg1 = Arg {| Id = sprintf "b%d" id; TrackGradient = true |} |}
+
+    _makeImplicitHiddenLayerForLossLayer il lossLayer
+
+  let private _makePredictGraph lossLayer g =
+    let id, fns =
+      match lossLayer with
+      | BCEWithLogitsLossLayer ->
+        sprintf "%s[Predict,%d]" Operations.Linear.Definition.Name 1, Operations.Linear.Definition.Functions
+      | CCEWithLogitsLossLayer l ->
+        sprintf "%s[Predict,%d]" Operations.HardMax.Definition.Name l.Classes, Operations.HardMax.Definition.Functions
+      | MSELossLayer ->
+        sprintf "%s[Predict,%d]" Operations.Linear.Definition.Name 1, Operations.Linear.Definition.Functions
+
+    Op1 {| Id = id
            Functions = fns
            Arg = g |}
 
-  let private _createComputationGraphForPrediction (hiddenLayers: HiddenLayer list) (lossLayer: LossLayer): ComputationGraph =
-    let g0 = Arg {| Id = "X"; TrackGradient = false |}
-
-    let g =
-      (hiddenLayers |> List.map (fun l -> l.N)) @ [lossLayer.Classes]
-      |> List.fold (fun (g, id) _ -> _createComputationGraphForOneLayer g id, id + 1) (g0, 1)
-      |> fst
-
-    _makeImplicitHiddenLayerForLossLayer g lossLayer
-
-  let private _makeLossLayer lossLayer g =
-    let fns =
+  let private _makeLossGraph lossLayer g =
+    let id, fns =
       match lossLayer with
-      | BCEWithLogitsLossLayer -> Operations.BCEWithLogitsLoss.Definition
-      | CCEWithLogitsLossLayer _ -> Operations.CCEWithLogitsLoss.Definition
-      | MSELossLayer _ -> Operations.MSELoss.Definition
+      | BCEWithLogitsLossLayer ->
+        sprintf "%s[Loss,%d]" Operations.BCEWithLogitsLoss.Definition.Name 1, Operations.BCEWithLogitsLoss.Definition.Functions
+      | CCEWithLogitsLossLayer l ->
+        sprintf "%s[Loss,%d]" Operations.CCEWithLogitsLoss.Definition.Name l.Classes, Operations.CCEWithLogitsLoss.Definition.Functions
+      | MSELossLayer ->
+        sprintf "%s[Loss,%d]" Operations.MSELoss.Definition.Name 1, Operations.MSELoss.Definition.Functions
 
-    Op2 {| Id = fns.Name
-           Functions = fns.Functions
+    Op2 {| Id = id
+           Functions = fns
            Arg0 = Arg {| Id = "Y"; TrackGradient = false |}
            Arg1 = g |}
 
   let makeLayers seed heScale (inputLayer: InputLayer) (hiddenLayers: HiddenLayer list) (lossLayer: LossLayer): Net =
-    let pg = _createComputationGraphForPrediction hiddenLayers lossLayer
+    let cg = _createCommonComputationGraph hiddenLayers lossLayer
 
-    let lg = _makeLossLayer lossLayer pg
+    let pg = _makePredictGraph lossLayer cg
+    let lg = _makeLossGraph lossLayer cg
 
-    let ps = _initializeParameters seed heScale [ inputLayer.N; lossLayer.Classes ]
+    let ps = _initializeParameters seed heScale ([ inputLayer.N ] @ (hiddenLayers |> List.map (fun l -> l.N)) @ [ lossLayer.Classes ])
 
     { LossGraph = lg
       PredictGraph = pg
