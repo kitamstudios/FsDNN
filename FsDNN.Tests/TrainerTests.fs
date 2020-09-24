@@ -5,7 +5,6 @@ open Xunit
 open System.Collections.Generic
 
 (*
-- collapse sigmoid/bce and remove id layer
 - Remove Tensor R0: lr should not be a tensor
 
 *)
@@ -14,7 +13,7 @@ open System.Collections.Generic
 let ``trainWithGD - single perceptron - logistic regression`` () =
   let n = Net.makeLayers 1 1.0 { N = 2 } [] BCEWithLogitsLossLayer
 
-  // OR function
+  // OR function - refer https://repl.it/@parthopdas/logisticregression
   let X = [ [ 0.; 1.; 0.; 1. ]
             [ 0.; 0.; 1.; 1. ] ] |> Tensor.ofListOfList
   let Y = [ [ 0.; 1.; 1.; 1. ] ] |> Tensor.ofListOfList

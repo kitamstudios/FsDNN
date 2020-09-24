@@ -114,16 +114,6 @@ module Net =
     Op1 {| D = d
            Arg = linear |}
 
-  let _makeImplicitHiddenLayerForLossLayer g lossLayer =
-    let d =
-      match lossLayer with
-      | BCEWithLogitsLossLayer -> Activations.Sigmoid.Definition
-      | CCEWithLogitsLossLayer _ -> Activations.Linear.Definition
-      | MSELossLayer -> Activations.Linear.Definition
-
-    Op1 {| D = d
-           Arg = g |}
-
   let private _createCommonComputationGraph (hiddenLayers: HiddenLayer list) (lossLayer: LossLayer): ComputationGraph =
     let g0 = Arg {| Id = "X"; TrackGradient = false |}
 
@@ -131,7 +121,7 @@ module Net =
       hiddenLayers
       |> List.fold (fun (g, id) l -> _createComputationGraphForHiddenLayer g l.Activation id, id + 1) (g0, 1)
 
-    let il =
+    let g =
        Op2 {| D = { Operations.Add.Definition with Name = sprintf "%s%d" Operations.Add.Definition.Name id }
               Arg0 =
                 Op2 {| D = {  Operations.Multiply.Definition with Name = sprintf "%s%d" Operations.Multiply.Definition.Name id }
@@ -139,13 +129,13 @@ module Net =
                        Arg1 = hg |}
               Arg1 = Arg {| Id = sprintf "b%d" id; TrackGradient = true |} |}
 
-    _makeImplicitHiddenLayerForLossLayer il lossLayer
+    g
 
   let private _makePredictGraph lossLayer g =
     let d =
       match lossLayer with
       | BCEWithLogitsLossLayer ->
-        { Activations.Linear.Definition with Name = sprintf "%s[Predict,%d]" Activations.Linear.Definition.Name 1 }
+        { Activations.Sigmoid.Definition with Name = sprintf "%s[Predict,%d]" Activations.Sigmoid.Definition.Name 1 }
       | CCEWithLogitsLossLayer l ->
         { Activations.HardMax.Definition with Name = sprintf "%s[Predict,%d]" Activations.HardMax.Definition.Name l.Classes }
       | MSELossLayer ->

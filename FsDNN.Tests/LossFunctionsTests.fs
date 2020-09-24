@@ -11,8 +11,8 @@ module BCEWithLogitsLoss =
 
     let it = LossFunctions.BCEWithLogitsLoss.Definition.Functions.F arg0 arg1
 
-    it.[0] |> shouldBeEquivalentTo [ [ 0.43386458262986227 ] ]
-    it |> Array.tail |> shouldBeEquivalentToT2 [| arg0; arg1 |]
+    it.[0] |> shouldBeEquivalentTo [ [ 1.456651201 ] ]
+    it |> Array.skip 1 |> Array.take 2 |> shouldBeEquivalentToT2 [| arg0; arg1 |]
 
   [<Fact>]
   let ``backPropagate - simple``() =
@@ -26,7 +26,7 @@ module BCEWithLogitsLoss =
     let dArg0, dArg1 = LossFunctions.BCEWithLogitsLoss.Definition.Functions.B cache id inG
 
     dArg0 |> shouldBeEquivalentTo inGArray
-    (arg1 - dArg1) |> shouldBeEquivalentTo [ [ -2.98722326; 2.01613236; 2.00236119 ] ]
+    (arg1 - dArg1) |> shouldBeEquivalentTo [ [ 0.056021052; 1.173809712; 1.23094157 ] ]
 
 module CCEWithLogitsLoss =
   [<Fact>]
