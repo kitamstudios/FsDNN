@@ -11,8 +11,10 @@ module Operations =
     let private _forwardPropagate (arg0: Tensor<double>) (arg1: Tensor<double>) =
       [| arg0 + arg1; arg0; arg1 |]
 
-    let private _backPropagate (_: Cache<Tensor<double>>) _ (inG: Tensor<double>) =
-      (inG, inG)
+    let private _backPropagate (cache: Cache<Tensor<double>>) id (inG: Tensor<double>) =
+      let arg0 = cache.[id].[1]
+      let arg1 = cache.[id].[2]
+      (inG.UnbroadCastTo(arg0), inG.UnbroadCastTo(arg1))
 
     let Definition: Operation2Definition<_> =
       { Name = "Add"

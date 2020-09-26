@@ -36,7 +36,7 @@ module TrainerDomain =
       { Epochs = 1_000
         LearningRate = TensorR0 0.01
         Lambda = None (* Some 0.7 *)
-        Optimizer = NullOptimizer (* ADAMOptimization ADAMParameters.Defaults *)
+        Optimizer = AdaMOptimizer AdaMOptimizerDomain.AdaMParameters.Defaults
         BatchSize = BatchSizeAll (* BatchSize64 *) }
 
 module Trainer =
@@ -49,11 +49,11 @@ module Trainer =
     else
       Prelude.undefined
 
-  let private _trainNetworkFor1MiniBatch net lr (_: Tensor<double>, ts: TrainingState, timer: Stopwatch) (X: Tensor<double>, Y: Tensor<double>): (Tensor<double> * TrainingState * Stopwatch) =
+  let private _trainNetworkFor1MiniBatch net hp (_: Tensor<double>, ts: TrainingState, timer: Stopwatch) (X: Tensor<double>, Y: Tensor<double>): (Tensor<double> * TrainingState * Stopwatch) =
     timer.Start()
     let J', cache = Net.forwardPropagate { net with Parameters = ts.Parameters } X Y
     let gradients = Net.backPropagate net cache
-    let ts = Optimizer.updateParameters lr gradients ts
+    let ts = Optimizer.updateParameters hp.LearningRate gradients (ts, hp.Optimizer)
     timer.Stop()
     let m = X.ColumnCount
     let J = (m |> double |> TensorR0).PointwiseMultiply(J')
@@ -65,7 +65,7 @@ module Trainer =
     let J, ts, timer =
       (X, Y)
       |> _getMiniBatches hp.BatchSize
-      |> Seq.fold (_trainNetworkFor1MiniBatch net hp.LearningRate) (0. |> TensorR0, ts, timer)
+      |> Seq.fold (_trainNetworkFor1MiniBatch net hp) (0. |> TensorR0, ts, timer)
     timer.Stop()
 
     let m = double X.ColumnCount

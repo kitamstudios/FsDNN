@@ -15,7 +15,7 @@ let ``trainWithGD - single perceptron - logistic regression`` () =
 
   let costs = Dictionary<int, Tensor<double>>()
   let cb = fun e _ J -> if e % 1 = 0 then costs.[e] <- J else ()
-  let hp = { HyperParameters.Defaults with Epochs = 300; LearningRate = TensorR0 1.  }
+  let hp = { HyperParameters.Defaults with Epochs = 300; LearningRate = TensorR0 1.; Optimizer = NullOptimizer   }
 
   let n = Trainer.trainWithGD cb n X Y hp
 
@@ -35,7 +35,7 @@ let ``trainWithGD - single perceptron - linear regression`` () =
 
   let costs = Dictionary<int, Tensor<double>>()
   let cb = fun e _ J -> if e % 1 = 0 then costs.[e] <- J else ()
-  let hp = { HyperParameters.Defaults with Epochs = 300; LearningRate = TensorR0 0.1 }
+  let hp = { HyperParameters.Defaults with Epochs = 300; LearningRate = TensorR0 0.1; Optimizer = NullOptimizer  }
 
   let n = Trainer.trainWithGD cb n X Y hp
 
@@ -57,7 +57,7 @@ let ``trainWithGD - multilayer perceptron - multi-class classification`` () =
 
   let costs = Dictionary<int, Tensor<double>>()
   let cb = fun e _ J -> if e % 1 = 0 then costs.[e] <- J else ()
-  let hp = { HyperParameters.Defaults with Epochs = 300; LearningRate = TensorR0 1. }
+  let hp = { HyperParameters.Defaults with Epochs = 300; LearningRate = TensorR0 1.; Optimizer = NullOptimizer }
 
   let n = Trainer.trainWithGD cb n X (Y |> Tensor.ofListOfList) hp
 

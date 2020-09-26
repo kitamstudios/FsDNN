@@ -42,8 +42,8 @@
 
 - [x] Batch Gradient Descent
 - [ ] Stochastic/Mini-Batch Gradient Descent
-- [ ] Momentum
-- [ ] AdaM
+- [x] Momentum
+- [x] AdaM
 
 ### Regularization
 

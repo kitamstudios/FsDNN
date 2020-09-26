@@ -46,19 +46,40 @@ module TensorDomain =
       | TensorR2 m0, TensorR2 m1 -> (m0 + m1) |> TensorR2
       | TensorR2 m0, TensorR1 v1 -> (m0 + DenseMatrix.ofColumnSeq (Enumerable.Repeat(v1, m0.ColumnCount))) |> TensorR2
       | TensorR2 m0, TensorR0 s1 -> m0.Add(s1) |> TensorR2
+      | TensorR1 v0, TensorR1 v1 -> (v0 + v1) |> TensorR1
+      | _ -> Prelude.undefined
+
+    static member inline Add(t: Tensor<'TData>, s: 'TData): Tensor<'TData> =
+      match t with
+      | TensorR2 m -> m.Add(s) |> TensorR2
+      | TensorR1 v -> v.Add(s) |> TensorR1
       | _ -> Prelude.undefined
 
     static member inline Subtract(t0: Tensor<'TData>, t1: Tensor<'TData>): Tensor<'TData> =
       match (t0, t1) with
       | TensorR2 m0, TensorR2 m1 -> m0.Subtract(m1) |> TensorR2
       | TensorR1 v0, TensorR2 m1 -> (v0 - (m1.EnumerateColumns() |> Seq.reduce (+))) |> TensorR1
+      | TensorR1 v0, TensorR1 v1 -> v0.Subtract(v1) |> TensorR1
+      | _ -> Prelude.undefined
+
+    static member inline Subtract(s: 'TData, t: Tensor<'TData>): Tensor<'TData> =
+      match t with
+      | TensorR2 m -> m.Subtract(s) |> TensorR2
+      | TensorR1 v -> v.Subtract(s) |> TensorR1
       | _ -> Prelude.undefined
 
     static member inline Multiply(t0: Tensor<'TData>, t1: Tensor<'TData>): Tensor<'TData> =
       match (t0, t1) with
       | TensorR2 m0, TensorR2 m1 -> m0.Multiply(m1) |> TensorR2
       | TensorR2 m0, TensorR0 s1 -> m0.Multiply(s1) |> TensorR2
+      | TensorR0 s0, TensorR1 v1 -> v1.Multiply(s0) |> TensorR1
       | TensorR0 s0, TensorR2 m1 -> m1.Multiply(s0) |> TensorR2
+      | _ -> Prelude.undefined
+
+    static member inline Multiply(s: 'TData, t: Tensor<'TData>): Tensor<'TData> =
+      match t with
+      | TensorR2 m -> m.Multiply(s) |> TensorR2
+      | TensorR1 v -> v.Multiply(s) |> TensorR1
       | _ -> Prelude.undefined
 
     static member inline Divide(t0: Tensor<'TData>, t1: Tensor<'TData>): Tensor<'TData> =
@@ -68,13 +89,27 @@ module TensorDomain =
       | TensorR2 m0, TensorR0 s1 -> m0.Divide(s1) |> TensorR2
       | _ -> Prelude.undefined
 
-    static member inline ( + ) (t0, t1): Tensor<'TData> = Tensor<'TData>.Add(t0, t1)
+    static member inline Divide(t: Tensor<'TData>, s: 'TData): Tensor<'TData> =
+      match t with
+      | TensorR2 m -> m.Divide(s) |> TensorR2
+      | TensorR1 v -> v.Divide(s) |> TensorR1
+      | _ -> Prelude.undefined
 
-    static member inline ( - ) (t0, t1): Tensor<'TData> = Tensor<'TData>.Subtract(t0, t1)
+    static member inline ( + ) (t0: Tensor<'TData>, t1: Tensor<'TData>): Tensor<'TData> = Tensor<'TData>.Add(t0, t1)
 
-    static member inline ( * ) (t0, t1): Tensor<'TData> = Tensor<'TData>.Multiply(t0, t1)
+    static member inline ( + ) (t: Tensor<'TData>, s: 'TData): Tensor<'TData> = Tensor<'TData>.Add(t, s)
 
-    static member inline ( / ) (t0, t1): Tensor<'TData> = Tensor<'TData>.Divide(t0, t1)
+    static member inline ( - ) (t0: Tensor<'TData>, t1: Tensor<'TData>): Tensor<'TData> = Tensor<'TData>.Subtract(t0, t1)
+
+    static member inline ( - ) (s: 'TData, t: Tensor<'TData>): Tensor<'TData> = Tensor<'TData>.Subtract(s, t)
+
+    static member inline ( * ) (t0: Tensor<'TData>, t1: Tensor<'TData>): Tensor<'TData> = Tensor<'TData>.Multiply(t0, t1)
+
+    static member inline ( * ) (s: 'TData, t: Tensor<'TData>): Tensor<'TData> = Tensor<'TData>.Multiply(s, t)
+
+    static member inline ( / ) (t0: Tensor<'TData>, t1: Tensor<'TData>): Tensor<'TData> = Tensor<'TData>.Divide(t0, t1)
+
+    static member inline ( / ) (t: Tensor<'TData>, s: 'TData): Tensor<'TData> = Tensor<'TData>.Divide(t, s)
 
 [<Extension>]
 type Tensor =
@@ -94,6 +129,7 @@ type Tensor =
   static member inline PointwisePower(t: Tensor<'TData>, exponent: 'TData): Tensor<'TData> =
     match t with
     | TensorR2 m -> m.PointwisePower(exponent) |> TensorR2
+    | TensorR1 v -> v.PointwisePower(exponent) |> TensorR1
     | _ -> Prelude.undefined
 
   [<Extension>]
@@ -113,6 +149,7 @@ type Tensor =
     match t0, t1 with
     | TensorR2 m0, TensorR2 m1 -> m0.PointwiseDivide(m1) |> TensorR2
     | TensorR2 m0, TensorR0 s1 -> m0.Divide(s1) |> TensorR2
+    | TensorR1 v0, TensorR1 v1 -> v0.PointwiseDivide(v1) |> TensorR1
     | _ -> Prelude.undefined
 
   [<Extension>]
@@ -125,6 +162,14 @@ type Tensor =
   static member inline TransposeThisAndMultiply(t0: Tensor<'TData>, t1: Tensor<'TData>): Tensor<'TData> =
     match t0, t1 with
     | TensorR2 m0, TensorR2 m1 -> m0.TransposeThisAndMultiply(m1) |> TensorR2
+    | _ -> Prelude.undefined
+
+  [<Extension>]
+  static member UnbroadCastTo(t0: Tensor<'TData>, t1: Tensor<'TData>): Tensor<'TData> =
+    match t0, t1 with
+    | TensorR2 m0, TensorR2 _ -> m0 |> TensorR2
+    | TensorR2 m0, TensorR1 _ -> m0.RowSums() |> TensorR1
+    | TensorR1 v0, TensorR1 _ -> v0 |> TensorR1
     | _ -> Prelude.undefined
 
   [<Extension>]
@@ -166,6 +211,13 @@ type Tensor =
         let imax = Vector.maxIndex v
         v |> Vector.mapi (fun i _ -> if i = imax then Matrix.One else Matrix.Zero)
       m |> Matrix.mapCols mapVector |> TensorR2
+    | _ -> Prelude.undefined
+
+  [<Extension>]
+  static member inline CreateShapeSameAsWithZeros(t: Tensor<'TData>): Tensor<'TData> =
+    match t with
+    | TensorR2 m -> DenseMatrix.zero<'TData> m.RowCount m.ColumnCount |> TensorR2
+    | TensorR1 v -> DenseVector.zero<'TData> v.Count |> TensorR1
     | _ -> Prelude.undefined
 
 module Tensor =

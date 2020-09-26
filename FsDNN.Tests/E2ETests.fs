@@ -82,10 +82,10 @@ let ``Classification - multi-class multi-label`` () =
 
   let costs = Dictionary<int, Tensor<double>>()
   let cb = fun e _ J -> if e % 1 = 0 then costs.[e] <- J else ()
-  let hp = { HyperParameters.Defaults with Epochs = 500; LearningRate = TensorR0 0.5 }
+  let hp = { HyperParameters.Defaults with Epochs = 600; LearningRate = TensorR0 0.5; Optimizer = AdaMOptimizer AdaMOptimizerDomain.AdaMParameters.Defaults }
 
   let n = Trainer.trainWithGD cb n X (Y |> Tensor.ofListOfList) hp
 
   let Y' = X |> Net.predict n
 
-  Y' |> shouldBeEquivalentToWithPrecision 7e-3 Y
+  Y' |> shouldBeEquivalentToWithPrecision 1e-4 Y

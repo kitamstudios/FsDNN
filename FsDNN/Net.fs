@@ -75,6 +75,12 @@ module NetDomain =
 
   type Gradients = Map<string, Tensor<double>>
 
+  /// Exponentially weighted average of the gradients.
+  type GradientVelocities = Map<string, Tensor<double>>
+
+  /// Exponentially weighted average of the squared gradient.
+  type SquaredGradientVelocities = Map<string, Tensor<double>>
+
   type TensorInitializer = int -> int -> int -> Tensor<double>
 
   type Net =

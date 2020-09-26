@@ -18,15 +18,15 @@ module Add =
   [<Fact>]
   let ``backPropagate - simple``() =
     let id = "node"
-    let arg0 = [ [ 1.; 2. ] ] |> Tensor.ofListOfList
-    let arg1 = [ [ 3.; 4. ] ] |> Tensor.ofListOfList
+    let arg0 = [ [ 1.; 2.; 4. ]; [ 0.; 2.; 3. ] ] |> Tensor.ofListOfList
+    let arg1 = [ 3.; 4. ] |> Tensor.ofList
     let cache = Map.empty |> Map.add id (Operations.Add.Definition.Functions.F arg0 arg1)
-    let inG = [ [ 1.; 1. ] ] |> Tensor.ofListOfList
+    let inG = [ [ 1.; 0.; 1. ]; [ 1.; 2.; 2. ] ] |> Tensor.ofListOfList
 
     let dArg0, dArg1 = Operations.Add.Definition.Functions.B cache id inG
 
-    dArg0 |> shouldBeEquivalentTo [ [ 1.; 1. ] ]
-    dArg1 |> shouldBeEquivalentTo [ [ 1.; 1. ] ]
+    dArg0 |> shouldBeEquivalentTo [ [ 1.; 0.; 1. ]; [ 1.; 2.; 2. ] ]
+    dArg1 |> shouldBeEquivalentTo [ [ 2.; 5. ] ]
 
 module Multiply =
   [<Fact>]
