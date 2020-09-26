@@ -1,11 +1,16 @@
 ﻿namespace KS.FsDNN
 
 module NullOptimizerDomain =
-  ()
+
+  type NullOptimizerState = Parameters
 
 module NullOptimizer =
-  let updateParameters (lr: Tensor<double>) (parameters: Parameters) (gradients: Gradients) =
-    parameters
+  open NullOptimizerDomain
+
+  let initialize = id
+
+  let updateParameters (lr: Tensor<double>) (gradients: Gradients) (s: NullOptimizerState): NullOptimizerState =
+    s
     |> Map.map (fun id value -> value - (lr * gradients.[id]))
 
 module MomentumOptimizerDomain =
@@ -18,8 +23,16 @@ module MomentumOptimizerDomain =
   type GradientVelocity = { dWv: Tensor<double>; dbv: Tensor<double> }
   type GradientVelocities = Map<int, GradientVelocity>
 
+  type MomentumOptimizerState = Parameters * GradientVelocities
+
 module MomentumOptimizer =
-  ()
+  open MomentumOptimizerDomain
+
+  let initialize parameters =
+    Prelude.undefined
+
+  let updateParameters (lr: Tensor<double>) (gradients: Gradients) (s: MomentumOptimizerState): MomentumOptimizerState =
+    s
 
 module AdaMOptimizerDomain =
   type AdaMParameters =
@@ -31,11 +44,20 @@ module AdaMOptimizerDomain =
   type SquaredGradientVelocity = { dWs: Tensor<double>; dbs: Tensor<double> }
   type SquaredGradientVelocities = Map<int, SquaredGradientVelocity>
 
+  type AdaMOptimizerState = Parameters * MomentumOptimizerDomain.GradientVelocities * SquaredGradientVelocity * double
+
 module AdaMOptimizer =
-  ()
+  open AdaMOptimizerDomain
+
+  let initialize parameters =
+    Prelude.undefined
+
+  let updateParameters (lr: Tensor<double>) (gradients: Gradients) (s: AdaMOptimizerState): AdaMOptimizerState =
+    s
 
 [<AutoOpen>]
 module OptimizerDomain =
+  open NullOptimizerDomain
   open MomentumOptimizerDomain
   open AdaMOptimizerDomain
 
@@ -45,9 +67,9 @@ module OptimizerDomain =
     | AdaMOptimizer of AdaMParameters
 
   type TrainingState =
-    | NullOptimizerState of Parameters
-    | MomentumOptimizerState of Parameters * GradientVelocities
-    | AdaMOptimizerState of Parameters * GradientVelocities * SquaredGradientVelocities * double
+    | NullOptimizerState of NullOptimizerState
+    | MomentumOptimizerState of MomentumOptimizerDomain.MomentumOptimizerState
+    | AdaMOptimizerState of AdaMOptimizerDomain.AdaMOptimizerState
     with
     member this.Parameters =
       match this with
@@ -57,12 +79,12 @@ module OptimizerDomain =
 
 module Optimizer =
 
-  let initializeState optimizer parameters =
-    match optimizer with
-    | NullOptimizer -> NullOptimizerState parameters
-    | _ -> Prelude.undefined
+  let initializeState parameters = function
+    | NullOptimizer -> NullOptimizer.initialize parameters |> NullOptimizerState
+    | MomentumOptimizer _ -> MomentumOptimizer.initialize parameters |> MomentumOptimizerState
+    | AdaMOptimizer _ -> MomentumOptimizer.initialize parameters |> AdaMOptimizerState
 
-  let updateParameters lr (ts: TrainingState) (gradients: Gradients): TrainingState =
-    match ts with
-    | NullOptimizerState parameters -> NullOptimizer.updateParameters lr parameters gradients |> NullOptimizerState
-    | _ -> Prelude.undefined
+  let updateParameters lr (gradients: Gradients) = function
+    | NullOptimizerState s -> NullOptimizer.updateParameters lr gradients s |> NullOptimizerState
+    | MomentumOptimizerState s -> MomentumOptimizer.updateParameters lr gradients s |> MomentumOptimizerState
+    | AdaMOptimizerState s -> AdaMOptimizer.updateParameters lr gradients s |> AdaMOptimizerState

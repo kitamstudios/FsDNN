@@ -53,7 +53,7 @@ module Trainer =
     timer.Start()
     let J', cache = Net.forwardPropagate { net with Parameters = ts.Parameters } X Y
     let gradients = Net.backPropagate net cache
-    let ts = Optimizer.updateParameters lr ts gradients
+    let ts = Optimizer.updateParameters lr gradients ts
     timer.Stop()
     let m = X.ColumnCount
     let J = (m |> double |> TensorR0).PointwiseMultiply(J')
@@ -79,7 +79,7 @@ module Trainer =
 
     let timer = Stopwatch()
 
-    let ts0 = Optimizer.initializeState hp.Optimizer net.Parameters
+    let ts0 = Optimizer.initializeState net.Parameters hp.Optimizer
 
     let ts =
       seq { for epoch in 0 .. (hp.Epochs - 1) do epoch }

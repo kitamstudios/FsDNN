@@ -177,6 +177,9 @@ module Tensor =
   let createZerosR1 n =
     DenseVector.zero<double> n |> TensorR1
 
+  let createZerosR2 rows cols =
+    DenseMatrix.zero<double> rows cols |> TensorR2
+
   let ofListOfList (rs: double list list) = rs |> array2D |> CreateMatrix.DenseOfArray |> TensorR2
 
   let ofList (rs: double list) = rs |> Array.ofSeq |> CreateVector.DenseOfArray |> TensorR1
