@@ -73,6 +73,8 @@ module NetDomain =
 
   type Parameters = Map<string, Tensor<double>>
 
+  type Gradients = Map<string, Tensor<double>>
+
   type Net =
     { LossGraph: ComputationGraph
       PredictGraph: ComputationGraph

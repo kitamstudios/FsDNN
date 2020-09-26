@@ -11,7 +11,6 @@
 
 ## Features
 
-
 ### Core
 
 - [x] Written in F#/.NET Core 3 using [Math.NET Numerics on MKL](https://numerics.mathdotnet.com/)
@@ -44,7 +43,7 @@
 - [x] Batch Gradient Descent
 - [ ] Stochastic/Mini-Batch Gradient Descent
 - [ ] Momentum
-- [ ] ADAM
+- [ ] AdaM
 
 ### Regularization
 
@@ -76,20 +75,16 @@ TBD - compare with numpy
 - [fsharpforfunandprofit - Catamorphisms](https://fsharpforfunandprofit.com/posts/recursive-types-and-folds-3/#container)
 - [Introduction to Machine Learning - Neural Network](https://tomaszgolan.github.io/introduction_to_machine_learning/markdown/introduction_to_machine_learning_04_nn/introduction_to_machine_learning_04_nn/)
 - [Exhaustive list of loss functions](https://machinelearningmastery.com/how-to-choose-loss-functions-when-training-deep-learning-neural-networks/)
+- https://towardsdatascience.com/cross-entropy-for-classification-d98e7f974451
+- https://levelup.gitconnected.com/killer-combo-softmax-and-cross-entropy-5907442f60ba
+- https://peterroelants.github.io/posts/cross-entropy-logistic/
+- https://deepnotes.io/softmax-crossentropy#cross-entropy-loss
+- https://deepai.org/machine-learning-glossary-and-terms/softmax-layer
 
-## Near term backlog
+## TODO
 
 - Refactoring
   - optimize matrix operations in tensor layer
   - Remove Tensor R0: lr should not be a tensor
   - Pull optimization out of trainer
 
-- To understand
-  - logit, softmax, sigmoid, BCE, stable BCE, multinomial, binomial
-
-- References
- - https://towardsdatascience.com/cross-entropy-for-classification-d98e7f974451
- - https://levelup.gitconnected.com/killer-combo-softmax-and-cross-entropy-5907442f60ba
- - https://peterroelants.github.io/posts/cross-entropy-logistic/
- - https://deepnotes.io/softmax-crossentropy#cross-entropy-loss
- - https://deepai.org/machine-learning-glossary-and-terms/softmax-layer

@@ -7,8 +7,6 @@ open System.Diagnostics
 module TrainerDomain =
   type EpochCallback = int -> TimeSpan -> Tensor<double> -> unit
 
-  type Gradients = Map<string, Tensor<double>>
-
   type BatchSize =
     | BatchSize1
     | BatchSize64
@@ -28,51 +26,17 @@ module TrainerDomain =
         | BatchSize1024 -> 1024
         | BatchSizeAll -> max
 
-  type MomentumParameters =
-    { Beta: double }
-    static member Defaults: MomentumParameters =
-      { Beta = 0.9 }
-
-  type ADAMParameters =
-    { Beta1: double; Beta2: double; Epsilon: double }
-    static member Defaults: ADAMParameters =
-      { Beta1 = 0.9; Beta2 = 0.999; Epsilon = 1e-8 }
-
-  type Optimization =
-    | NoOptimization
-    | MomentumOptimization of MomentumParameters
-    | ADAMOptimization of ADAMParameters
-
-  /// Exponentially weighted average of the gradients.
-  type GradientVelocity = { dWv: Tensor<double>; dbv: Tensor<double> }
-  type GradientVelocities = Map<int, GradientVelocity>
-
-  /// Exponentially weighted average of the squared gradient.
-  type SquaredGradientVelocity = { dWs: Tensor<double>; dbs: Tensor<double> }
-  type SquaredGradientVelocities = Map<int, SquaredGradientVelocity>
-
-  type TrainingState =
-    | NoOptTrainingState of Parameters
-    | MomentumTrainingState of Parameters * GradientVelocities
-    | ADAMTrainingState of Parameters * GradientVelocities * SquaredGradientVelocities * double
-    with
-    member this.Parameters =
-      match this with
-      | NoOptTrainingState p -> p
-      | MomentumTrainingState (p, _) -> p
-      | ADAMTrainingState (p, _, _, _) -> p
-
   type HyperParameters =
     { Epochs : int
       LearningRate: Tensor<double>
       Lambda: Tensor<double> option
-      Optimization: Optimization
+      Optimizer: Optimizer
       BatchSize: BatchSize } with
     static member Defaults =
       { Epochs = 1_000
         LearningRate = TensorR0 0.01
         Lambda = None (* Some 0.7 *)
-        Optimization = NoOptimization (* ADAMOptimization ADAMParameters.Defaults *)
+        Optimizer = NullOptimizer (* ADAMOptimization ADAMParameters.Defaults *)
         BatchSize = BatchSizeAll (* BatchSize64 *) }
 
 module Trainer =
@@ -85,21 +49,11 @@ module Trainer =
     else
       Prelude.undefined
 
-  let private _updateParametersWithNoOptimization (lr: Tensor<double>) (parameters: Parameters) (gradients: Gradients): TrainingState =
-    parameters
-    |> Map.map (fun id value -> value - (lr * gradients.[id]))
-    |> NoOptTrainingState
-
-  let private _updateParameters (hp: HyperParameters) (ts: TrainingState) (gradients: Gradients): TrainingState =
-    match hp.Optimization with
-    | NoOptimization -> _updateParametersWithNoOptimization hp.LearningRate ts.Parameters gradients
-    | _ -> Prelude.undefined
-
-  let private _trainNetworkFor1MiniBatch net hp (_: Tensor<double>, ts: TrainingState, timer: Stopwatch) (X: Tensor<double>, Y: Tensor<double>): (Tensor<double> * TrainingState * Stopwatch) =
+  let private _trainNetworkFor1MiniBatch net lr (_: Tensor<double>, ts: TrainingState, timer: Stopwatch) (X: Tensor<double>, Y: Tensor<double>): (Tensor<double> * TrainingState * Stopwatch) =
     timer.Start()
     let J', cache = Net.forwardPropagate { net with Parameters = ts.Parameters } X Y
     let gradients = Net.backPropagate net cache
-    let ts = _updateParameters hp ts gradients
+    let ts = Optimizer.updateParameters lr ts gradients
     timer.Stop()
     let m = X.ColumnCount
     let J = (m |> double |> TensorR0).PointwiseMultiply(J')
@@ -111,7 +65,7 @@ module Trainer =
     let J, ts, timer =
       (X, Y)
       |> _getMiniBatches hp.BatchSize
-      |> Seq.fold (_trainNetworkFor1MiniBatch net hp) (0. |> TensorR0, ts, timer)
+      |> Seq.fold (_trainNetworkFor1MiniBatch net hp.LearningRate) (0. |> TensorR0, ts, timer)
     timer.Stop()
 
     let m = double X.ColumnCount
@@ -125,10 +79,7 @@ module Trainer =
 
     let timer = Stopwatch()
 
-    let ts0 =
-      match hp.Optimization with
-      | NoOptimization -> NoOptTrainingState net.Parameters
-      | _ -> Prelude.undefined
+    let ts0 = Optimizer.initializeState hp.Optimizer net.Parameters
 
     let ts =
       seq { for epoch in 0 .. (hp.Epochs - 1) do epoch }

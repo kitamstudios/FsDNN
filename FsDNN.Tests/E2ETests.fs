@@ -5,10 +5,10 @@ open Xunit
 open System.Collections.Generic
 
 [<Fact>]
-let ``multi-class multi-label classification`` () =
+let ``Classification - multi-class multi-label`` () =
   let n = Net.makeLayers 1 1.0 { N = 7 } [ FullyConnectedLayer {| N = 10; Activation = ReLU |}; FullyConnectedLayer {| N = 3; Activation = Linear |} ] (BCEWithLogitsLossLayer {| Classes = 3 |})
 
-  // X, y = sklearn.datasets.make_multilabel_classification(n_samples=50, n_features=7, n_classes=3, n_labels=2, random_state=1)
+  // X, y = sklearn.datasets.make_multilabel_classification(n_samples=50, n_features=7, n_classes=3, n_labels=2, random_state=1); StandardScaler().fit(X).transform(X)
   let X = [[-0.00978279;  0.4793566 ; -0.98806157;  0.4793566;   0.4793566  ;-0.00978279;
             -0.00978279; -0.49892218; -0.00978279; -0.49892218;  0.4793566;   0.968496;
             -0.00978279;  0.968496  ;  1.45763539; -0.98806157; -1.47720097;  0.4793566;
