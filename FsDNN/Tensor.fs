@@ -169,7 +169,7 @@ type Tensor =
     | _ -> Prelude.undefined
 
 module Tensor =
-  let createRandomizedR2 seed rows cols scale =
+  let createRandomizedR2 scale seed rows cols =
     let t0 = DenseMatrix.random<double> rows cols (Normal.WithMeanVariance(0.0, 1.0, Random(seed))) |> TensorR2
     let t1 = Math.Sqrt(2. / double cols) * scale |> TensorR0
     t0 * t1

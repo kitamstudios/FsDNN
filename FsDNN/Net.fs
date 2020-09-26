@@ -75,6 +75,8 @@ module NetDomain =
 
   type Gradients = Map<string, Tensor<double>>
 
+  type TensorInitializer = int -> int -> int -> Tensor<double>
+
   type Net =
     { LossGraph: ComputationGraph
       PredictGraph: ComputationGraph
@@ -86,14 +88,15 @@ module Net =
     {| LossGraphString = n.LossGraph |> ComputationGraph.toString
        PredictGraphString = n.PredictGraph |> ComputationGraph.toString |}
 
-  let private _initializeParameters (seed: int) (heScale: double) layerNeurons: Map<string, Tensor<double>> =
+  let initializeParameters seed0 (initTensors: TensorInitializer) layerSizes: Map<string, Tensor<double>> =
+
     let ws =
-      layerNeurons
+      layerSizes
       |> List.pairwise
-      |> List.mapi (fun i (nPrev, n) -> sprintf "W%d" (i + 1), Tensor.createRandomizedR2 (seed + i) n nPrev heScale)
+      |> List.mapi (fun i (nPrev, n) -> sprintf "W%d" (i + 1), initTensors (seed0 + i) n nPrev)
 
     let bs =
-      layerNeurons
+      layerSizes
       |> List.skip 1
       |> List.mapi (fun i n -> sprintf "b%d" (i + 1), (Tensor.createZerosR1 n))
 
@@ -168,7 +171,9 @@ module Net =
     let pg = _makePredictGraph lossLayer cg
     let lg = _makeLossGraph lossLayer cg
 
-    let ps = _initializeParameters seed heScale ([ inputLayer.N ] @ (hiddenLayers |> List.map (fun l -> l.N)) @ [ lossLayer.Classes ])
+    let layerSizes = [ inputLayer.N ] @ (hiddenLayers |> List.map (fun l -> l.N)) @ [ lossLayer.Classes ]
+    let initTensors = Tensor.createRandomizedR2 heScale
+    let ps = initializeParameters seed initTensors layerSizes
 
     { LossGraph = lg
       PredictGraph = pg
