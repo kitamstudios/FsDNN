@@ -9,8 +9,8 @@ let ``makeLayer - logistic unit`` () =
   let n = Net.makeLayers 1 1.0 { N = 2 } [] (BCEWithLogitsLossLayer {| Classes = 1 |})
 
   let it = n |> Net.toString
-  it.LossGraphString |> should equal "BCEWithLogitsLoss[Loss,1]( Y[TG=false], Add1( Multiply1( W1[TG=true], X[TG=false] ), b1[TG=true] ) )"
-  it.PredictGraphString |> should equal "Sigmoid[Predict,1]( Add1( Multiply1( W1[TG=true], X[TG=false] ), b1[TG=true] ) )"
+  it.LossGraphString |> should equal "BCEWithLogitsLoss2[Loss,1]( Y[TG=false], Add1( Multiply1( W1[TG=true], X[TG=false] ), b1[TG=true] ) )"
+  it.PredictGraphString |> should equal "Sigmoid2[Predict,1]( Add1( Multiply1( W1[TG=true], X[TG=false] ), b1[TG=true] ) )"
 
   n.Parameters |> Map.toList |> List.map fst |> List.sort |> should equal [ "W1"; "b1" ]
   n.Parameters.["W1"] |> shouldBeEquivalentTo [ [ -0.29934664737072975; -0.46362085300372824 ] ]
@@ -21,8 +21,8 @@ let ``makeLayer - multilayer perceptron`` () =
   let n = Net.makeLayers 1 1.0 { N = 2 } [ FullyConnectedLayer {| N = 3; Activation = Sigmoid |} ] (CCEWithLogitsLossLayer {| Classes = 2 |})
 
   let it = n |> Net.toString
-  it.LossGraphString |> should equal "CCEWithLogitsLoss[Loss,2]( Y[TG=false], Add2( Multiply2( W2[TG=true], Sigmoid( Add1( Multiply1( W1[TG=true], X[TG=false] ), b1[TG=true] ) ) ), b2[TG=true] ) )"
-  it.PredictGraphString |> should equal "HardMax[Predict,2]( Add2( Multiply2( W2[TG=true], Sigmoid( Add1( Multiply1( W1[TG=true], X[TG=false] ), b1[TG=true] ) ) ), b2[TG=true] ) )"
+  it.LossGraphString |> should equal "CCEWithLogitsLoss3[Loss,2]( Y[TG=false], Add2( Multiply2( W2[TG=true], Sigmoid1( Add1( Multiply1( W1[TG=true], X[TG=false] ), b1[TG=true] ) ) ), b2[TG=true] ) )"
+  it.PredictGraphString |> should equal "HardMax3[Predict,2]( Add2( Multiply2( W2[TG=true], Sigmoid1( Add1( Multiply1( W1[TG=true], X[TG=false] ), b1[TG=true] ) ) ), b2[TG=true] ) )"
 
   n.Parameters |> Map.toList |> List.map fst |> List.sort |> should equal [ "W1"; "W2"; "b1"; "b2" ]
   n.Parameters.["W1"].Shape |> should equal (3, 2)

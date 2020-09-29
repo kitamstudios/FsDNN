@@ -124,7 +124,7 @@ module Net =
       | Sigmoid -> Activations.Sigmoid.Definition
       | ReLU -> Activations.ReLU.Definition
 
-    Op1 {| D = d
+    Op1 {| D = {d with Name = sprintf "%s%d" d.Name id }
            Arg = linear |}
 
   let private _createCommonComputationGraph (hiddenLayers: HiddenLayer list): ComputationGraph =
@@ -144,38 +144,33 @@ module Net =
 
     g
 
-  let private _makePredictGraph lossLayer g =
+  let private _makePredictGraph lossLayer id g =
     let d =
       match lossLayer with
-      | BCEWithLogitsLossLayer l ->
-        { Activations.Sigmoid.Definition with Name = sprintf "%s[Predict,%d]" Activations.Sigmoid.Definition.Name l.Classes }
-      | CCEWithLogitsLossLayer l ->
-        { Activations.HardMax.Definition with Name = sprintf "%s[Predict,%d]" Activations.HardMax.Definition.Name l.Classes }
-      | MSELossLayer ->
-        { Activations.Linear.Definition with Name = sprintf "%s[Predict,%d]" Activations.Linear.Definition.Name 1 }
+      | BCEWithLogitsLossLayer _ -> Activations.Sigmoid.Definition
+      | CCEWithLogitsLossLayer _ -> Activations.HardMax.Definition
+      | MSELossLayer -> Activations.Linear.Definition
 
-    Op1 {| D = d
+    Op1 {| D = { d with Name = sprintf "%s%d[Predict,%d]" d.Name id lossLayer.Classes }
            Arg = g |}
 
-  let private _makeLossGraph lossLayer g =
+  let private _makeLossGraph lossLayer id g =
     let d =
       match lossLayer with
-      | BCEWithLogitsLossLayer l ->
-        { LossFunctions.BCEWithLogitsLoss.Definition with Name = sprintf "%s[Loss,%d]" LossFunctions.BCEWithLogitsLoss.Definition.Name l.Classes }
-      | CCEWithLogitsLossLayer l ->
-        { LossFunctions.CCEWithLogitsLoss.Definition with Name = sprintf "%s[Loss,%d]" LossFunctions.CCEWithLogitsLoss.Definition.Name l.Classes }
-      | MSELossLayer ->
-        { LossFunctions.MSELoss.Definition with Name = sprintf "%s[Loss,%d]" LossFunctions.MSELoss.Definition.Name 1 }
+      | BCEWithLogitsLossLayer _ -> LossFunctions.BCEWithLogitsLoss.Definition
+      | CCEWithLogitsLossLayer _ -> LossFunctions.CCEWithLogitsLoss.Definition
+      | MSELossLayer -> LossFunctions.MSELoss.Definition
 
-    Op2 {| D = d
+    Op2 {| D = { d with Name = sprintf "%s%d[Loss,%d]" d.Name id lossLayer.Classes }
            Arg0 = Arg {| Id = "Y"; TrackGradient = false |}
            Arg1 = g |}
 
   let makeLayers seed heScale (inputLayer: InputLayer) (hiddenLayers: HiddenLayer list) (lossLayer: LossLayer): Net =
     let cg = _createCommonComputationGraph hiddenLayers
 
-    let pg = _makePredictGraph lossLayer cg
-    let lg = _makeLossGraph lossLayer cg
+    let hiddenLayerId = hiddenLayers.Length + 2  // 1 in addition to the 1 implicit layer
+    let pg = _makePredictGraph lossLayer hiddenLayerId cg
+    let lg = _makeLossGraph lossLayer hiddenLayerId cg
 
     let layerSizes = [ inputLayer.N ] @ (hiddenLayers |> List.map (fun l -> l.N)) @ [ lossLayer.Classes ]
     let initTensors = Tensor.createRandomizedR2 heScale
