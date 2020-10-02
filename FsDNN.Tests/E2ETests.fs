@@ -6,7 +6,8 @@ open System.Collections.Generic
 
 [<Fact>]
 let ``Classification - multi-class multi-label`` () =
-  let n = Net.makeLayers 1 1.0 { N = 7 } [ FullyConnectedLayer {| N = 10; Activation = ReLU |}; FullyConnectedLayer {| N = 3; Activation = Linear |} ] (BCEWithLogitsLossLayer {| Classes = 3 |})
+  let n = Net.makeLayers 1 1.0 { N = 7 } [ FullyConnectedLayer {| N = 10; Activation = ReLU |}
+                                           FullyConnectedLayer {| N = 3; Activation = Linear |} ] (BCEWithLogitsLossLayer {| Classes = 3 |})
 
   // X, y = sklearn.datasets.make_multilabel_classification(n_samples=50, n_features=7, n_classes=3, n_labels=2, random_state=1); StandardScaler().fit(X).transform(X)
   let X = [[-0.00978279;  0.4793566 ; -0.98806157;  0.4793566;   0.4793566  ;-0.00978279;
@@ -82,10 +83,19 @@ let ``Classification - multi-class multi-label`` () =
 
   let costs = Dictionary<int, Tensor<double>>()
   let cb = fun e _ J -> if e % 1 = 0 then costs.[e] <- J else ()
-  let hp = { HyperParameters.Defaults with Epochs = 600; LearningRate = TensorR0 0.5; Optimizer = AdaMOptimizer AdaMOptimizerDomain.AdaMParameters.Defaults }
+  let hp = { HyperParameters.Defaults with Epochs = 600; LearningRate = TensorR0 0.5; Regularizer = L2Regularizer 0.10; Optimizer = AdaMOptimizer AdaMOptimizerDomain.AdaMParameters.Defaults }
 
   let n = Trainer.trainWithGD cb n X (Y |> Tensor.ofListOfList) hp
 
   let Y' = X |> Net.predict n
 
+  costs.[0] |> shouldBeEquivalentTo [ [ 2.42754482 ] ]
+  costs.[10] |> shouldBeEquivalentTo [ [ 1.13169455 ] ]
+  costs.[20] |> shouldBeEquivalentTo [ [ 0.10322972 ] ]
+
+  // NOTE: These haven't been (over)fitted due to regularization.
+  let Ya = Y |> array2D
+  Ya.[1, 0] <- 0.99937259
+  Ya.[2, 46] <- 1.0
+  let Y = Ya |> toListOfList
   Y' |> shouldBeEquivalentToWithPrecision 1e-4 Y

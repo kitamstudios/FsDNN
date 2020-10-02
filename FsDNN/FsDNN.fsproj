@@ -15,6 +15,7 @@
         <Compile Include="Activations.fs" />
         <Compile Include="LossFunctions.fs" />
         <Compile Include="Net.fs" />
+        <Compile Include="Regularizer.fs" />
         <Compile Include="Optimizer.fs" />
         <Compile Include="Trainer.fs" />
     </ItemGroup>

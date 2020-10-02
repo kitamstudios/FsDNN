@@ -16,6 +16,7 @@
         <Compile Include="ActivationsTests.fs" />
         <Compile Include="LossFunctionsTests.fs" />
         <Compile Include="NetTests.fs" />
+        <Compile Include="RegularizerTests.fs" />
         <Compile Include="OptimizerTests.fs" />
         <Compile Include="TrainerTests.fs" />
         <Compile Include="E2ETests.fs" />

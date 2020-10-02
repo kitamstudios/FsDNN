@@ -41,14 +41,19 @@
 ### Optimization
 
 - [x] Batch Gradient Descent
-- [ ] Stochastic/Mini-Batch Gradient Descent
 - [x] Momentum
 - [x] AdaM
 
 ### Regularization
 
-- [ ] L2
+- [ ] L1
+- [x] L2
 - [ ] Dropout
+
+## Loader
+
+- [ ] Stochastic/Mini-Batch Gradient Descent
+- [ ] Normalization
 
 ### Demos
 

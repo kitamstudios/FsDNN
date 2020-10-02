@@ -29,13 +29,13 @@ module TrainerDomain =
   type HyperParameters =
     { Epochs : int
       LearningRate: Tensor<double>
-      Lambda: Tensor<double> option
+      Regularizer: Regularizer
       Optimizer: Optimizer
       BatchSize: BatchSize } with
     static member Defaults =
       { Epochs = 1_000
         LearningRate = TensorR0 0.01
-        Lambda = None (* Some 0.7 *)
+        Regularizer = NullRegularizer (* L2Regularizer 0.7 *)
         Optimizer = AdaMOptimizer AdaMOptimizerDomain.AdaMParameters.Defaults
         BatchSize = BatchSizeAll (* BatchSize64 *) }
 
@@ -49,23 +49,33 @@ module Trainer =
     else
       Prelude.undefined
 
-  let private _trainNetworkFor1MiniBatch net hp (_: Tensor<double>, ts: TrainingState, timer: Stopwatch) (X: Tensor<double>, Y: Tensor<double>): (Tensor<double> * TrainingState * Stopwatch) =
-    timer.Start()
+  let private _forwardPropagate net reg (ts: TrainingState) X Y =
     let J', cache = Net.forwardPropagate { net with Parameters = ts.Parameters } X Y
+    let J' = reg.RegularizeCost net.Parameters J'
+    J', cache
+
+  let private _backPropagate net reg cache =
     let gradients = Net.backPropagate net cache
+    let gradients = reg.RegularizeGradients net.Parameters gradients
+    gradients
+
+  let private _trainNetworkFor1MiniBatch net reg hp m (_: Tensor<double>, ts: TrainingState, timer: Stopwatch) (X: Tensor<double>, Y: Tensor<double>): (Tensor<double> * TrainingState * Stopwatch) =
+    timer.Start()
+    let J', cache = _forwardPropagate net reg ts X Y
+    let gradients = _backPropagate net reg cache
     let ts = Optimizer.updateParameters hp.LearningRate gradients (ts, hp.Optimizer)
     timer.Stop()
-    let m = X.ColumnCount
-    let J = (m |> double |> TensorR0).PointwiseMultiply(J')
+
+    let J = (m |> TensorR0).PointwiseMultiply(J')
     J, ts, timer
 
-  let private _trainNetworkFor1Epoch (timer: Stopwatch) (callback: EpochCallback) (net: Net) (X: Tensor<double>) (Y: Tensor<double>) (hp: HyperParameters) (ts: TrainingState) epoch =
+  let private _trainNetworkFor1Epoch (timer: Stopwatch) (callback: EpochCallback) (net: Net) reg m (X: Tensor<double>) (Y: Tensor<double>) (hp: HyperParameters) (ts: TrainingState) epoch =
     timer.Restart()
 
     let J, ts, timer =
       (X, Y)
       |> _getMiniBatches hp.BatchSize
-      |> Seq.fold (_trainNetworkFor1MiniBatch net hp) (0. |> TensorR0, ts, timer)
+      |> Seq.fold (_trainNetworkFor1MiniBatch net reg hp m) (0. |> TensorR0, ts, timer)
     timer.Stop()
 
     let m = double X.ColumnCount
@@ -79,10 +89,12 @@ module Trainer =
 
     let timer = Stopwatch()
 
+    let m = X.ColumnCount |> double
+    let reg = Regularizer.getRegularizer m hp.Regularizer
     let ts0 = Optimizer.initializeState net.Parameters hp.Optimizer
 
     let ts =
       seq { for epoch in 0 .. (hp.Epochs - 1) do epoch }
-      |> Seq.fold (_trainNetworkFor1Epoch timer callback net X Y hp) ts0
+      |> Seq.fold (_trainNetworkFor1Epoch timer callback net reg m X Y hp) ts0
 
     { net with Parameters = ts.Parameters }

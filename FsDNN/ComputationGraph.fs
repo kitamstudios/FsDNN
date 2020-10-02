@@ -49,7 +49,7 @@ module ComputationGraph =
   let fold fArg fOp1 fOp2 (acc: 'State) (g: ComputationGraph<'TData>): 'State =
     let rec loop t cont =
       match t with
-      | Arg a -> cont (fArg a.Id acc)
+      | Arg a -> cont (fArg a.Id a.TrackGradient acc)
       | Op1 o -> loop o.Arg (fun acc ->
                               cont (fOp1 o.D.Name acc))
       | Op2 o -> loop o.Arg0 (fun acc0 ->

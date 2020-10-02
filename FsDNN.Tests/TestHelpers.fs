@@ -55,3 +55,7 @@ module TestHelpers =
 
   let shouldBeApproximately (a1: double) (a2) =
     a1.Should().BeApproximately(a2, precision, String.Empty, Array.empty) |> ignore
+
+  let toListOfList arr =
+      [ for x in 0 .. Array2D.length1 arr - 1 ->
+          [ for y in 0 .. Array2D.length2 arr - 1 -> arr.[x, y] ] ]

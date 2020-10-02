@@ -137,6 +137,12 @@ type Tensor =
     t0 + (x |> TensorR0)
 
   [<Extension>]
+  static member inline PointwiseAdd(t0: Tensor<'TData>, x: 'TData): Tensor<'TData> =
+    match t0 with
+    | TensorR0 s -> (s + x) |> TensorR0
+    | _ -> Prelude.undefined
+
+  [<Extension>]
   static member inline PointwiseMultiply(t0: Tensor<'TData>, t1: Tensor<'TData>): Tensor<'TData> =
     match t0, t1 with
     | TensorR2 m0, TensorR2 m1 -> m0.PointwiseMultiply(m1) |> TensorR2
