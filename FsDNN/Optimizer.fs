@@ -90,24 +90,23 @@ module OptimizerDomain =
 
   type TrainingState =
     | NullOptimizerState of NullOptimizerState
-    | MomentumOptimizerState of MomentumOptimizerState
-    | AdaMOptimizerState of AdaMOptimizerState
+    | MomentumOptimizerState of MomentumParameters * MomentumOptimizerState
+    | AdaMOptimizerState of AdaMParameters * AdaMOptimizerState
     with
     member this.Parameters =
       match this with
       | NullOptimizerState p -> p
-      | MomentumOptimizerState (p, _) -> p
-      | AdaMOptimizerState (p, _, _, _) -> p
+      | MomentumOptimizerState (_, (p, _)) -> p
+      | AdaMOptimizerState (_, (p, _, _, _)) -> p
 
 module Optimizer =
 
   let initializeState parameters = function
     | NullOptimizer -> NullOptimizer.initializeState parameters |> NullOptimizerState
-    | MomentumOptimizer _ -> MomentumOptimizer.initializeState parameters |> MomentumOptimizerState
-    | AdaMOptimizer _ -> AdaMOptimizer.initializeState parameters |> AdaMOptimizerState
+    | MomentumOptimizer mp -> (mp, MomentumOptimizer.initializeState parameters) |> MomentumOptimizerState
+    | AdaMOptimizer ap -> (ap, AdaMOptimizer.initializeState parameters) |> AdaMOptimizerState
 
   let updateParameters lr (gradients: Gradients) = function
-    | NullOptimizerState s, NullOptimizer -> NullOptimizer.updateParameters lr gradients s |> NullOptimizerState
-    | MomentumOptimizerState s, MomentumOptimizer mp -> MomentumOptimizer.updateParameters mp lr gradients s |> MomentumOptimizerState
-    | AdaMOptimizerState s, AdaMOptimizer ap  -> AdaMOptimizer.updateParameters ap lr gradients s |> AdaMOptimizerState
-    | _ -> Prelude.undefined
+    | NullOptimizerState s -> NullOptimizer.updateParameters lr gradients s |> NullOptimizerState
+    | MomentumOptimizerState (mp, s) -> (mp, MomentumOptimizer.updateParameters mp lr gradients s) |> MomentumOptimizerState
+    | AdaMOptimizerState (ap, s)  -> (ap, AdaMOptimizer.updateParameters ap lr gradients s) |> AdaMOptimizerState

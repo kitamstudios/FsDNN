@@ -63,7 +63,7 @@ module Trainer =
     timer.Start()
     let J', cache = _forwardPropagate net reg ts X Y
     let gradients = _backPropagate net reg cache
-    let ts = Optimizer.updateParameters hp.LearningRate gradients (ts, hp.Optimizer)
+    let ts = Optimizer.updateParameters hp.LearningRate gradients ts
     timer.Stop()
 
     let J = (m |> TensorR0).PointwiseMultiply(J')
@@ -90,7 +90,7 @@ module Trainer =
     let timer = Stopwatch()
 
     let m = X.ColumnCount |> double
-    let reg = Regularizer.getRegularizer m hp.Regularizer
+    let reg = Regularizer.get m hp.Regularizer
     let ts0 = Optimizer.initializeState net.Parameters hp.Optimizer
 
     let ts =

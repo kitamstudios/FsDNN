@@ -40,6 +40,6 @@ module RegularizerDomain =
 
 module Regularizer =
 
-  let getRegularizer m = function
+  let get m = function
     | NullRegularizer -> { RegularizeCost = NullRegularizer.regularizeCost; RegularizeGradients = NullRegularizer.regularizeGradients  }
     | L2Regularizer lambda -> { RegularizeCost = L2Regularizer.regularizeCost lambda m; RegularizeGradients = L2Regularizer.regularizeGradients lambda m }
