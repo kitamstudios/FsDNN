@@ -17,6 +17,7 @@
         <Compile Include="Net.fs" />
         <Compile Include="Regularizer.fs" />
         <Compile Include="Optimizer.fs" />
+        <Compile Include="Loader.fs" />
         <Compile Include="Trainer.fs" />
     </ItemGroup>
 

@@ -18,6 +18,7 @@
         <Compile Include="NetTests.fs" />
         <Compile Include="RegularizerTests.fs" />
         <Compile Include="OptimizerTests.fs" />
+        <Compile Include="LoaderTests.fs" />
         <Compile Include="TrainerTests.fs" />
         <Compile Include="E2ETests.fs" />
         <Compile Include="Program.fs" />

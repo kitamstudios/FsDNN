@@ -85,7 +85,7 @@ let ``Classification - multi-class multi-label`` () =
   let cb = fun e _ J -> if e % 1 = 0 then costs.[e] <- J else ()
   let hp = { HyperParameters.Defaults with Epochs = 600; LearningRate = TensorR0 0.5; Regularizer = L2Regularizer 0.10; Optimizer = AdaMOptimizer AdaMOptimizerDomain.AdaMParameters.Defaults }
 
-  let n = Trainer.trainWithGD cb n X (Y |> Tensor.ofListOfList) hp
+  let n = Trainer.trainWithGD cb n [(X, (Y |> Tensor.ofListOfList))] X.ColumnCount hp
 
   let Y' = X |> Net.predict n
 

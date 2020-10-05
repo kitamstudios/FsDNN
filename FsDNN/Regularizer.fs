@@ -7,7 +7,7 @@ module NullRegularizer =
 
 module L2Regularizer =
 
-  let regularizeCost (lambda: double) (m: double) (parameters: Parameters) (cost: Tensor<double>): Tensor<double> =
+  let regularizeCost (lambda: double) m (parameters: Parameters) (cost: Tensor<double>): Tensor<double> =
     let _folder acc (k: string) (v: Tensor<double>) =
       if (k.[0] = 'W') then
         acc + v.PointwisePower(2.).ColumnSums().Sum()
@@ -15,14 +15,14 @@ module L2Regularizer =
         acc
 
     let sos = parameters |> Map.fold _folder 0.
-    let l2RegCost = lambda / (2. * m) * sos
+    let l2RegCost = lambda / (2. * double m) * sos
 
     cost.PointwiseAdd(l2RegCost)
 
-  let regularizeGradients (lambda: double) (m: double) (parameters: Parameters) (gradients: Gradients): Gradients =
+  let regularizeGradients (lambda: double) m (parameters: Parameters) (gradients: Gradients): Gradients =
     let _mapper lambda (k: string) (v: Tensor<double>) =
       if (k.[0] = 'W') then
-        v + (lambda / m) * parameters.[k]
+        v + (lambda / double m) * parameters.[k]
       else
         v
 

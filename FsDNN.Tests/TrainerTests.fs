@@ -15,9 +15,9 @@ let ``trainWithGD - single perceptron - logistic regression`` () =
 
   let costs = Dictionary<int, Tensor<double>>()
   let cb = fun e _ J -> if e % 1 = 0 then costs.[e] <- J else ()
-  let hp = { HyperParameters.Defaults with Epochs = 300; LearningRate = TensorR0 1.; Optimizer = NullOptimizer   }
+  let hp = { HyperParameters.Defaults with Epochs = 300; LearningRate = TensorR0 1.; Optimizer = NullOptimizer; Regularizer = NullRegularizer }
 
-  let n = Trainer.trainWithGD cb n X Y hp
+  let n = Trainer.trainWithGD cb n [(X, Y)] X.ColumnCount hp
 
   costs.[0] |> shouldBeEquivalentTo [ [ 0.911103 ] ]
   costs.[1] |> shouldBeEquivalentTo [ [ 0.649122 ] ]
@@ -35,9 +35,9 @@ let ``trainWithGD - single perceptron - linear regression`` () =
 
   let costs = Dictionary<int, Tensor<double>>()
   let cb = fun e _ J -> if e % 1 = 0 then costs.[e] <- J else ()
-  let hp = { HyperParameters.Defaults with Epochs = 300; LearningRate = TensorR0 0.1; Optimizer = NullOptimizer  }
+  let hp = { HyperParameters.Defaults with Epochs = 300; LearningRate = TensorR0 0.1; Optimizer = NullOptimizer; Regularizer = NullRegularizer  }
 
-  let n = Trainer.trainWithGD cb n X Y hp
+  let n = Trainer.trainWithGD cb n [(X, Y)] X.ColumnCount hp
 
   costs.[0] |> shouldBeEquivalentTo [ [ 20.3527507991 ] ]
   costs.[1] |> shouldBeEquivalentTo [ [ 15.0567184038 ] ]
@@ -57,9 +57,9 @@ let ``trainWithGD - multilayer perceptron - multi-class classification`` () =
 
   let costs = Dictionary<int, Tensor<double>>()
   let cb = fun e _ J -> if e % 1 = 0 then costs.[e] <- J else ()
-  let hp = { HyperParameters.Defaults with Epochs = 300; LearningRate = TensorR0 1.; Optimizer = NullOptimizer }
+  let hp = { HyperParameters.Defaults with Epochs = 300; LearningRate = TensorR0 1.; Optimizer = NullOptimizer; Regularizer = NullRegularizer }
 
-  let n = Trainer.trainWithGD cb n X (Y |> Tensor.ofListOfList) hp
+  let n = Trainer.trainWithGD cb n [(X, (Y |> Tensor.ofListOfList))] X.ColumnCount hp
 
   costs.[0] |> shouldBeEquivalentTo [ [ 3.44758157 ] ]
   costs.[1] |> shouldBeEquivalentTo [ [ 7.44451981 ] ]

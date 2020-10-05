@@ -19,7 +19,6 @@
 - [x] Static Computation Graph
 - [x] Tensor abstraction (Uniform API for Matrix/Vector with minimal broadcasting support)
 - [x] Minimal transfer learning
-- [ ] Gradient checking
 
 ### Initializations
 
@@ -52,8 +51,8 @@
 
 ## Loader
 
-- [ ] Stochastic/Mini-Batch Gradient Descent
-- [ ] Normalization
+- [x] Stochastic/Mini-Batch Gradient Descent
+- [x] Normalization
 
 ### Demos
 
@@ -69,7 +68,7 @@ TBD - compare with numpy
 
 - [ ] Implment Tensor functions on GPU
 - [ ] Implement CNN and RNN class networks based on the Computation Graph
-- [ ] Enable dynamic version of  the Computation Graph 
+- [ ] Enable dynamic version of the Computation Graph 
 
 ## References
 
@@ -85,11 +84,3 @@ TBD - compare with numpy
 - https://peterroelants.github.io/posts/cross-entropy-logistic/
 - https://deepnotes.io/softmax-crossentropy#cross-entropy-loss
 - https://deepai.org/machine-learning-glossary-and-terms/softmax-layer
-
-## TODO
-
-- Refactoring
-  - optimize matrix operations in tensor layer
-  - Remove Tensor R0: lr should not be a tensor
-  - Pull optimization out of trainer
-

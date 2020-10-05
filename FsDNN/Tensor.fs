@@ -226,6 +226,12 @@ type Tensor =
     | TensorR1 v -> DenseVector.zero<'TData> v.Count |> TensorR1
     | _ -> Prelude.undefined
 
+  [<Extension>]
+  static member inline GetSlice(t: Tensor<'TData>, rStart, rFinish, cStart, cFinish): Tensor<'TData> =
+    match t with
+    | TensorR2 m -> m.GetSlice(rStart, rFinish, cStart, cFinish) |> TensorR2
+    | _ -> Prelude.undefined
+
 module Tensor =
   let createRandomizedR2 scale seed rows cols =
     let t0 = DenseMatrix.random<double> rows cols (Normal.WithMeanVariance(0.0, 1.0, Random(seed))) |> TensorR2
@@ -237,6 +243,9 @@ module Tensor =
 
   let createZerosR2 rows cols =
     DenseMatrix.zero<double> rows cols |> TensorR2
+
+  let createWithInit rows cols init =
+    DenseMatrix.init rows cols init |> TensorR2
 
   let ofListOfList (rs: double list list) = rs |> array2D |> CreateMatrix.DenseOfArray |> TensorR2
 
